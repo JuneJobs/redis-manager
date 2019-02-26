@@ -1,10 +1,23 @@
-var express = require('express');
-var app = express();
+'use strict'
 
-app.get('/', function (req, res) {
-    res.send('Hello World!');
-});
+//Import config options for develop
+const config = require('./src/config/default.json');
+const bodyParser = require("body-parser");
+const express = require("express");
+//Import msg module
 
-app.listen(8080, function () {
-    console.log('Example app listening on port 8080!');
+const _apiPort = config.webServicePort;
+global.app = express();
+global.router = express.Router();
+global.path = __dirname;
+
+app.use(bodyParser.json()); // support json encoded bodies
+app.use("/", router);
+
+require('./src/router/router');
+
+
+//Server runner
+app.listen(_apiPort, function () {
+    console.log("server running on 8080");
 });

@@ -1,0 +1,7 @@
+{
+    "loggerLevel": "debug",
+    "serverErrorCode": {
+        "acceessDenied": 0
+    },
+    "webServicePort": 8080
+}
