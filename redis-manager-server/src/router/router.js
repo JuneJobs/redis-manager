@@ -4,7 +4,7 @@
 const LlRequest = require("../lib/ISRequest");
 
 const Redis = require("ioredis");
-var redis = new Redis();
+let redis = new Redis();
 
 router.post("/domain", (req, res) => {
     let param = req.body;
@@ -36,7 +36,7 @@ router.post("/domain", (req, res) => {
         case 'GET':
             redis.keys(`c:dm:*`, (err, keys) => {
                 console.log(keys);
-                var pipeline = redis.pipeline();
+                let pipeline = redis.pipeline();
                 keys.map((key) => {pipeline.get(key)});
                 pipeline.exec((err, values) => {
                     let responseJson = [];

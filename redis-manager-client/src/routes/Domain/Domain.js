@@ -13,11 +13,15 @@ import {
 import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-balham.css';
 import axios from "axios";
+import 'typeface-roboto';
 
 const styles = theme => ({
     container: {
         display: 'flex',
         flexWrap: 'wrap',
+    },
+    _h6Spacing: {
+        margin: '0 10px',   
     },
     textField: {
         marginLeft: theme.spacing.unit,
@@ -32,6 +36,7 @@ const styles = theme => ({
     },
     card: {
         minWidth: 275,
+        minHeight: 800
     },
     bullet: {
         display: 'inline-block',
@@ -55,7 +60,7 @@ class Domain extends Component {
         super(props);
         this.state = {
             columnDefs: [{
-                headerName: "논리 도메인",
+                headerName: "Logical Domain",
                 field: "key",
                 align: "right",
                 width: 200,
@@ -63,7 +68,7 @@ class Domain extends Component {
                 //checkboxSelection: true,
                 editable: false
             }, {
-                headerName: "물리 도메인",
+                headerName: "Physical Domain",
                 field: "value",
                 editable: false
             }],
@@ -91,14 +96,14 @@ class Domain extends Component {
     };
 
     getData = async () => {
-        var params = {
+        let params = {
             "queryType": "GET"
         };
         try {
             const response = await axios.post("/domain", params);
             response.data.sort(function (a, b) {
-                var keyA = a.key.toUpperCase(); // ignore upper and lowercase
-                var keyB = b.key.toUpperCase(); // ignore upper and lowercase
+                let keyA = a.key.toUpperCase(); // ignore upper and lowercase
+                let keyB = b.key.toUpperCase(); // ignore upper and lowercase
                 if (keyA < keyB) {
                     return -1;
                 }
@@ -169,7 +174,7 @@ class Domain extends Component {
 
     setData = async (params) => {
         try {
-            const response = await axios.post("/domain", params);
+            await axios.post("/domain", params);
             this.getData();
             this.selectFirstNode();
             this.setState({
@@ -202,7 +207,7 @@ class Domain extends Component {
 
     delData = async (params) => {
         try {
-            const response = await axios.post("/domain", params);
+            await axios.post("/domain", params);
             this.getData();
             this.selectFirstNode();
         } catch (e) {
@@ -224,15 +229,15 @@ class Domain extends Component {
         return (
             
             <Card className={classes.card}>
-            <Typography variant="h6" color="inherit" noWrap>
-            도메인 관리
+            <Typography variant="h6" color="inherit" className={classes._h6Spacing} noWrap>
+            Domain Management
             </Typography>
             <CardContent>
                <div 
                     id="myGrid"
                     style={{
                     height: "100%",
-                    width: "80%"
+                    width: "100%"
                     }}
                     className="ag-theme-balham">
                     <TextField
@@ -241,7 +246,7 @@ class Domain extends Component {
                             readOnly: this.state.readonly
                         }}
                         id="dm-lg"
-                        label="논리 도메인"
+                        label="Logical Domain"
                         inputRef={el => this.input = el}
                         className={classes.textField}
                         margin="normal"
@@ -250,7 +255,7 @@ class Domain extends Component {
                     />
                     <TextField
                         id="dm-py"
-                        label="물리 도메인"
+                        label="Physical Domain"
                         className={classes.textField}
                         margin="normal"
                         value={this.state.selectedData.value}
@@ -260,21 +265,21 @@ class Domain extends Component {
                         variant="contained" 
                         className={classes.button}
                         onClick={this.onAddClick.bind(this)}>
-                        추가
+                        Add
                     </Button>
                     <Button 
                         variant="contained" 
                         className={classes.button}
                         color="primary"
                         onClick={this.onSaveClick.bind(this)}>
-                        저장
+                        Save
                     </Button>
                     <Button 
                         variant="contained" 
                         className={classes.button}
                         color = "secondary"
                         onClick={this.onDeleteClick.bind(this)}>
-                        삭제
+                        Delete
                     </Button>
                     <AgGridReact
                         columnDefs={this.state.columnDefs}

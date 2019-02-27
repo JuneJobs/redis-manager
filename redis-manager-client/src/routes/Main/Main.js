@@ -20,13 +20,19 @@ import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import InboxIcon from '@material-ui/icons/MoveToInbox';
 import MailIcon from '@material-ui/icons/Mail';
-import Domain from '../../routes/Domain'
+import Domain from '../../routes/Domain';
+import KeyManagement from '../../routes/KeyManagenent';
+import RedisMark from './images/redis-icon.png';
+import 'typeface-roboto';
 
 const drawerWidth = 240;
 
 const styles = theme => ({
   root: {
     display: 'flex',
+  },
+  _h6Spacing: {
+    marginLeft: 12,
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -131,7 +137,8 @@ class Main extends React.Component {
               >
                 <MenuIcon />
               </IconButton>
-              <Typography variant="h6" color="inherit" noWrap>
+              <img className="RedisMark" src={RedisMark} width="40" alt="RedisMark"/>
+              <Typography variant="h5" color="inherit" className={classes._h6Spacing} noWrap>
                 Redis Manager
               </Typography>
             </Toolbar>
@@ -157,7 +164,7 @@ class Main extends React.Component {
             </div>
             <Divider />
             <List>
-              {['도메인 관리', '데이터베이스 연결'].map((text, index) => (
+              {['도메인 관리', '키 관리'].map((text, index) => (
                 <ListItem button key={index} onClick={() => this._handleTouchTap(index)}>
                   <ListItemIcon>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
                   <ListItemText primary={text} />
@@ -168,7 +175,7 @@ class Main extends React.Component {
           <main className={classes.content}>
             <div className={classes.toolbar} />
               {value === 0 && <Domain/>}
-              {value === 1 && <div>Item Two</div>}
+              {value === 1 && <div><KeyManagement/></div>}
           </main>
         </div>
       </div>
