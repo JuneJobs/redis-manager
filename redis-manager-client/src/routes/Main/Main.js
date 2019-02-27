@@ -132,7 +132,7 @@ class Main extends React.Component {
                 <MenuIcon />
               </IconButton>
               <Typography variant="h6" color="inherit" noWrap>
-                Redis 관리 툴
+                Redis Manager
               </Typography>
             </Toolbar>
           </AppBar>
