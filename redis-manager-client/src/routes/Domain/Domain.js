@@ -233,6 +233,48 @@ class Domain extends Component {
             Domain Management
             </Typography>
             <CardContent>
+                <TextField
+                    required
+                    inputProps={{
+                        readOnly: this.state.readonly
+                    }}
+                    id="dm-lg"
+                    label="Logical Domain"
+                    inputRef={el => this.input = el}
+                    className={classes.textField}
+                    margin="normal"
+                    value={this.state.selectedData.key}
+                    onChange={this.onPyTextChange.bind(this)}
+                />
+                <TextField
+                    id="dm-py"
+                    label="Physical Domain"
+                    className={classes.textField}
+                    margin="normal"
+                    value={this.state.selectedData.value}
+                    onChange={this.onTextChange.bind(this)}
+                />
+                <Button 
+                    variant="contained" 
+                    className={classes.button}
+                    onClick={this.onAddClick.bind(this)}>
+                    Add
+                </Button>
+                <Button 
+                    variant="contained" 
+                    className={classes.button}
+                    color="primary"
+                    onClick={this.onSaveClick.bind(this)}>
+                    Save
+                </Button>
+                <Button 
+                    variant="contained" 
+                    className={classes.button}
+                    color = "secondary"
+                    onClick={this.onDeleteClick.bind(this)}>
+                    Delete
+                </Button>
+                
                <div 
                     id="myGrid"
                     style={{
@@ -240,47 +282,6 @@ class Domain extends Component {
                     width: "100%"
                     }}
                     className="ag-theme-balham">
-                    <TextField
-                        required
-                        inputProps={{
-                            readOnly: this.state.readonly
-                        }}
-                        id="dm-lg"
-                        label="Logical Domain"
-                        inputRef={el => this.input = el}
-                        className={classes.textField}
-                        margin="normal"
-                        value={this.state.selectedData.key}
-                        onChange={this.onPyTextChange.bind(this)}
-                    />
-                    <TextField
-                        id="dm-py"
-                        label="Physical Domain"
-                        className={classes.textField}
-                        margin="normal"
-                        value={this.state.selectedData.value}
-                        onChange={this.onTextChange.bind(this)}
-                    />
-                    <Button 
-                        variant="contained" 
-                        className={classes.button}
-                        onClick={this.onAddClick.bind(this)}>
-                        Add
-                    </Button>
-                    <Button 
-                        variant="contained" 
-                        className={classes.button}
-                        color="primary"
-                        onClick={this.onSaveClick.bind(this)}>
-                        Save
-                    </Button>
-                    <Button 
-                        variant="contained" 
-                        className={classes.button}
-                        color = "secondary"
-                        onClick={this.onDeleteClick.bind(this)}>
-                        Delete
-                    </Button>
                     <AgGridReact
                         columnDefs={this.state.columnDefs}
                         defaultColDef={this.state.defaultColDef}
