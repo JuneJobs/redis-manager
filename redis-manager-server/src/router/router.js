@@ -78,8 +78,8 @@ let _removeIndexForKey = (psKey, cb) => {
 let _getIndexForKey = (key, cb) => {
     redis.hget('c:ui', key, (err, keyIndex) => {
         if (keyIndex !== null) {
-            redis.hset('c:ui', key, keyIndex + 1, () => {
-                cb(keyIndex + 1);
+            redis.hset('c:ui', key, (parseInt(keyIndex) + 1).toString(), () => {
+                cb((parseInt(keyIndex) + 1).toString());
             });
         } else {
             redis.hset('c:ui', key, 1, () => {
@@ -116,10 +116,11 @@ router.post("/keys", (req, res) =>{
                             ['set', `c:km:${keyIndex}:psKey`, params.psKey],
                             ['set', `c:km:${keyIndex}:lgKey`, params.lgKey],
                             ['set', `c:km:${keyIndex}:ptKey`, params.ptKey],
-                            ['sadd', 'c:km:rg', params.psKey]
+                            ['set', `c:km:${keyIndex}:idx`, keyIndex],
+                            ['sadd', 'c:km:rg', keyIndex]
                         ]).exec((err, result) => {
-                            res.send(responseCode.OK);
-                        })
+                            res.send(responseCode.SUCCESS);
+                        });
 
                     });
                 
@@ -138,8 +139,13 @@ router.post("/keys", (req, res) =>{
                     lg: logical
         */
         case 'PUT':
-            redis.set(`c:dm:${param.py}`, param.lg);
-                res.send("OK");
+            redis.pipeline([
+                ['set', `c:km:${params.keyIndex}:psKey`, params.psKey],
+                ['set', `c:km:${params.keyIndex}:lgKey`, params.lgKey],
+                ['set', `c:km:${params.keyIndex}:ptKey`, params.ptKey]
+            ]).exec((err, result) => {
+                res.send(responseCode.SUCCESS);
+            });
             break;
         
         /*  URI     /key
@@ -147,9 +153,32 @@ router.post("/keys", (req, res) =>{
         */
         case 'GET':
             redis.smembers('c:km:rg', (err, keys) => {
-                keys.shift();
-                //출력용 리스트를 만들자.
-                res.send(keys);
+                let pipeline = redis.pipeline();
+
+                keys.map((key) => {
+                    pipeline.mget(`c:km:${key}:idx`, `c:km:${key}:psKey`, `c:km:${key}:lgKey`, `c:km:${key}:ptKey`);
+                });
+                pipeline.exec((err, values) => {
+                    //values[0].shift();
+                    let responseJson = [];
+                    values.map((array) => {
+                        responseJson.push({
+                            idx: array[1][0], 
+                            psKey: array[1][1],
+                            lgKey: array[1][2],
+                            ptKey: array[1][3]
+                        });
+                    })
+
+                    console.log(responseJson);
+                    
+                    // let responseJson = [];
+                    // values.map((array, index) => {
+                    //     responseJson.push(array);
+                    // });
+                     res.send(responseJson);
+                });
+                //res.send(keys);
             });
             break;
         
@@ -158,8 +187,15 @@ router.post("/keys", (req, res) =>{
                     key: domain key name
         */
         case 'DELETE':
-            redis.del(`c:km:${param.key}`);
-            res.send("OK");
+            redis.pipeline([
+                ['del', `c:km:${params.keyIndex}:psKey`],
+                ['del', `c:km:${params.keyIndex}:lgKey`],
+                ['del', `c:km:${params.keyIndex}:ptKey`],
+                ['del', `c:km:${params.keyIndex}:idx`],
+                ['srem', `c:km:rg`, params.keyIndex]
+            ]).exec((err, result) => {
+                res.send(responseCode.SUCCESS);
+            });
             break;
 
         default:

@@ -16,6 +16,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import CancelIcon from '@material-ui/icons/Cancel';
 import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import Button from '@material-ui/core/Button';
+import axios from "axios";
 import {
     AgGridReact
 } from 'ag-grid-react';
@@ -193,21 +194,23 @@ class KeyManagement extends React.Component {
             })),
             multi: null,
             columnDefs: [{
-                headerName: "Index",
-                field: "key",
-                align: "right",
-                width: 90,
-                //headerCheckboxSelection: true,
-                //checkboxSelection: true,
-                editable: false
+                headerName: "ID",
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
             }, {
                 headerName: "Logical Key",
-                field: "value",
+                field: "lgKey",
                 editable: false,
                 width: 300,
             }, {
                 headerName: "Physical Key",
-                field: "value",
+                field: "psKey",
+                editable: false,
+                width: 300,
+            }, {
+                headerName: "Key Pattern",
+                field: "ptKey",
                 editable: false,
                 width: 300,
             }],
@@ -219,8 +222,10 @@ class KeyManagement extends React.Component {
             rowSelection: "single",
             rowData: [],
             selectedData: {
-                key: '',
-                value: ''
+                lgKey: '',
+                psKey: '',
+                ptKey: '',
+                idx: ''
             },
             readonly: true,
             mode: 'R'
@@ -231,14 +236,86 @@ class KeyManagement extends React.Component {
         this.setState({
             [name]: value,
         });
+
+        let selectedRows = this.gridApi.getSelectedRows()[0];
+        if (this.state.mode === 'R') {
+            this.setState({
+                selectedData: {
+                    idx: selectedRows.idx,
+                    psKey: selectedRows.psKey,
+                    lgKey: selectedRows.lgKey
+                }
+            });
+        } else {
+            this.setState({
+                selectedData: {
+                    idx: 0,
+                    psKey: selectedRows.psKey,
+                    lgKey: selectedRows.lgKey
+                }
+            });
+        }
     };
     _handleUpdateInput = (searchText) => {
         console.log(searchText)
     };
 
-    _onBtnAddClick = () => {
-        
+    selectFirstNode() {
+        this.gridApi.forEachNode(function (node) {
+            console.log(node);
+            if (node.data.key === "s") {
+                node.setSelected(true);
+            }
+        });
+    }
+    
+    getData = async () => {
+        let params = {
+            "queryType": "GET"
+        };
+        try {
+            const response = await axios.post("/keys", params);
+            this.setState({
+                rowData: response.data
+            });
+            this.selectFirstNode();
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    _onBtnAddClick = async () => {
+        this.setState({
+            selectedData: {
+                lgKey: '',
+                psKey: '',
+                ptKey: '',
+                idx: ''
+            },
+            readonly: false,
+            mode: 'W'
+        });
     };
+    _onBtnSaveClick = async () => {
+        try {
+            let params = {
+                "queryType": "POST",
+                "idx": this.state.selectedData.idx,
+                "lgKey": this.state.selectedData.lgKey,
+                "psKey": this.state.selectedData.psKey,
+                "ptKey": this.state.selectedData.ptKey,
+            };
+            await axios.post("/keys", params);
+
+            this.getData();
+            this.setState({
+                readonly: true,
+                mode: 'R'
+            });
+        } catch (e) {
+            console.log(e);
+        }
+    }
 
     text = () => {
         let keys = this.state.multi.map(single => single.value);
@@ -254,7 +331,7 @@ class KeyManagement extends React.Component {
     onGridReady = (params) => {
         this.gridApi = params.api;
         this.gridColumnApi = params.columnApi;
-        //this.getData();
+        this.getData();
         //this.onSelectionChanged()
     };
 
@@ -306,6 +383,7 @@ class KeyManagement extends React.Component {
                         components={components}
                         value={this.state.multi}
                         onChange={this.handleChange('multi')}
+                        //onChange={this.onTextChange.bind(this)}
                         placeholder="Select Domains"
                         isMulti
                     />
@@ -318,7 +396,8 @@ class KeyManagement extends React.Component {
                     <Button 
                         variant="contained" 
                         className={classes.button}
-                        color="primary">
+                        color="primary"
+                        onClick={this._onBtnSaveClick.bind(this)}>
                         Save
                     </Button>
                     <Button 
