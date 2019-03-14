@@ -6,8 +6,7 @@ import './App.css';
 import Main from './routes/Main';
 class App extends Component {
   render() {
-    return ( <
-      Main / >
+    return ( < Main / >
     );
   }
 }

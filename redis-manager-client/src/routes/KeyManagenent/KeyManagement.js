@@ -241,28 +241,28 @@ class KeyManagement extends React.Component {
               valueGetter: "node.id"
             },
             {
-              headerName: "Logical Key",
-              field: "lgKey",
-              editable: false,
-              width: 300
-            },
-            {
               headerName: "Physical Key",
               field: "psKey",
               editable: false,
-              width: 300
+              width: 200
+            },
+            {
+              headerName: "Logical Key",
+              field: "lgKey",
+              editable: false,
+              width: 600
             },
             {
               headerName: "Key Pattern",
               field: "ptKey",
               editable: false,
-              width: 300
+              width: 200
             },
             {
               headerName: "Key Type",
               field: "tyKey",
               editable: false,
-              width: 300
+              width: 200
             }
           ],
           defaultColDef: {
