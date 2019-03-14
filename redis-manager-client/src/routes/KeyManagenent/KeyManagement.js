@@ -6,7 +6,7 @@ import classNames from 'classnames';
 import Select from 'react-select';
 import { withStyles } from '@material-ui/core/styles';
 import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
+//import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
@@ -16,13 +16,24 @@ import MenuItem from '@material-ui/core/MenuItem';
 import CancelIcon from '@material-ui/icons/Cancel';
 import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import withMobileDialog from '@material-ui/core/withMobileDialog';
+
 import axios from "axios";
 import {
     AgGridReact
 } from 'ag-grid-react';
 import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-balham.css';
-
+let updateRow = false;
+let selectedData = {
+    lgKey: '',
+    psKey: ''
+};
 const styles = theme => ({
     root: {
         flexGrow: 1,
@@ -96,7 +107,7 @@ function inputComponent({ inputRef, ...props }) {
 
 function Control(props) {
     return (
-        <TextField
+        < TextField
             fullWidth
             InputProps={{
               inputComponent,
@@ -144,6 +155,32 @@ function ValueContainer(props) {
     return <div className={props.selectProps.classes.valueContainer}>{props.children}</div>;
 }
 
+function onChipDelete(props) {
+    updateRow = true;
+    let rmIdx = 0;
+    let curArray = props.getValue();
+    props.getValue().map((Object, index) => {
+        if (Object.value === props.data.value) {
+            rmIdx = index;
+        }
+    })
+    curArray.splice(rmIdx, 1);
+    curArray.map((arr, index) => {
+        if (index === 0) {
+            selectedData.psKey = arr.value;
+            selectedData.lgKey = arr.label;
+        } else {
+            selectedData.psKey = selectedData.psKey + ':' + arr.value;
+            selectedData.lgKey = selectedData.lgKey + '>' + arr.label;
+        }
+    })
+    console.log(selectedData);
+    // parent.setState({
+    //     readonly: false,
+    //     mode: 'W'
+    // });
+}
+
 function MultiValue(props) {
     return (
         <Chip
@@ -152,8 +189,11 @@ function MultiValue(props) {
           className={classNames(props.selectProps.classes.chip, {
             [props.selectProps.classes.chipFocused]: props.isFocused,
           })}
-          onDelete={props.removeProps.onClick}
-          deleteIcon={<CancelIcon {...props.removeProps} />}
+            onDelete={event=> {
+                props.removeProps.onClick();
+                onChipDelete(props);
+            }}
+            deleteIcon={<CancelIcon {...props.removeProps} />}
         />
     );
 }
@@ -180,18 +220,9 @@ const components = {
 class KeyManagement extends React.Component {
     constructor(props) {
         super(props);
+        this._getDomains();
         this.state = {
-            domains: [
-                { label: 'App Client' , value: 'ac'},
-                { label: 'Association', value: 'ass' },
-                { label: 'Birth Date', value: 'bdt' },
-                { label: 'Common System', value: 'c' },
-                { label: 'Temporary', value: 'tmp' },
-                { label: 'Pattern', value: '*' }
-            ].map(domain => ({
-            label: domain.label,
-            value: domain.value,
-            })),
+            domains: [],
             multi: null,
             columnDefs: [{
                 headerName: "ID",
@@ -228,7 +259,46 @@ class KeyManagement extends React.Component {
                 idx: ''
             },
             readonly: true,
-            mode: 'R'
+            mode: 'R',
+            dialogOpen: false
+        }
+    }
+    _getDomains = async () => {
+        let params = {
+            "queryType": "GET"
+        };
+        try {
+            const res = await axios.post("domain", params);
+            console.log(res);
+            let domains = [];
+
+            res.data.map((object) => {
+                domains.push({
+                    label: object.value,
+                    value: object.key
+                });
+            });
+            domains.sort(function (a, b) {
+                let keyA = a.label.toUpperCase(); // ignore upper and lowercase
+                let keyB = b.label.toUpperCase(); // ignore upper and lowercase
+                if (keyA < keyB) {
+                    return -1;
+                }
+                if (keyA > keyB) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            this.setState({
+                domains: domains.map(domain => ({
+                label: domain.label,
+                value: domain.value,
+            })) 
+            });
+
+        } catch (e) {
+            console.log(e);
         }
     }
 
@@ -237,33 +307,79 @@ class KeyManagement extends React.Component {
             [name]: value,
         });
 
+        let psKey = '',
+            lgKey = '';
+        console.log(this.gridApi);
+        //first registration
+        let newItem = false;
+        if (this.state.mode === 'R'){
+            newItem = false;
+        }
         let selectedRows = this.gridApi.getSelectedRows()[0];
-        if (this.state.mode === 'R') {
+        if (selectedRows === undefined) {
+            newItem =true;
+        }
+
+        if (!newItem) {
+            value.map((object, index) => {
+                if (index === 0) {
+                    psKey = object.value;
+                    lgKey = object.label;
+                } else {
+                    psKey = psKey + ':' + object.value;
+                    lgKey = lgKey + '>' + object.label;
+                }
+            })
+
             this.setState({
+                
                 selectedData: {
                     idx: selectedRows.idx,
-                    psKey: selectedRows.psKey,
-                    lgKey: selectedRows.lgKey
-                }
+                    psKey: psKey,
+                    lgKey: lgKey,
+                    ptKey: selectedRows.ptKey
+                },
+                //rowData
             });
         } else {
-            this.setState({
-                selectedData: {
-                    idx: 0,
-                    psKey: selectedRows.psKey,
-                    lgKey: selectedRows.lgKey
+            value.map((object, index) => {
+                if (index === 0) {
+                    psKey = object.value;
+                    lgKey = object.label;
+                } else {
+                    psKey = psKey + ':' + object.value;
+                    lgKey = lgKey + '>' + object.label;
                 }
+            })
+            this.setState({
+              selectedData: {
+                idx: 0,
+                psKey: psKey,
+                lgKey: lgKey,
+                ptKey: ''
+              },
+              mode: 'W'
             });
         }
     };
+    
+    handleTextChange = name => event => {
+        this.setState({
+            selectedData: {
+                ...this.state.selectedData,
+                ptKey: event.target.value
+            }
+        });
+    };
+    
     _handleUpdateInput = (searchText) => {
         console.log(searchText)
     };
-
+    
     selectFirstNode() {
         this.gridApi.forEachNode(function (node) {
             console.log(node);
-            if (node.data.key === "s") {
+            if (node.id === "0") {
                 node.setSelected(true);
             }
         });
@@ -278,7 +394,10 @@ class KeyManagement extends React.Component {
             this.setState({
                 rowData: response.data
             });
-            this.selectFirstNode();
+            if (response.data.length > 0) {
+                this.selectFirstNode();
+            }
+            
         } catch (e) {
             console.log(e);
         }
@@ -292,19 +411,41 @@ class KeyManagement extends React.Component {
                 ptKey: '',
                 idx: ''
             },
+            ["multi"]: [],
             readonly: false,
             mode: 'W'
         });
     };
     _onBtnSaveClick = async () => {
         try {
-            let params = {
-                "queryType": "POST",
-                "idx": this.state.selectedData.idx,
-                "lgKey": this.state.selectedData.lgKey,
-                "psKey": this.state.selectedData.psKey,
-                "ptKey": this.state.selectedData.ptKey,
-            };
+            let params ={};
+            if (this.state.mode === "W") {
+                params = {
+                    "queryType": "POST",
+                    "lgKey": this.state.selectedData.lgKey,
+                    "psKey": this.state.selectedData.psKey,
+                    "ptKey": this.state.selectedData.ptKey,
+                };
+            } else {
+                if (updateRow) {
+                    params = {
+                        "queryType": "PUT",
+                        "idx": this.state.selectedData.idx,
+                        "lgKey": selectedData.lgKey,
+                        "psKey": selectedData.psKey,
+                        "ptKey": this.state.selectedData.ptKey,
+                    };
+                } else {
+                    params = {
+                        queryType: "PUT",
+                        idx: this.state.selectedData.idx,
+                        lgKey: this.state.selectedData.lgKey,
+                        psKey: this.state.selectedData.psKey,
+                        ptKey: this.state.selectedData.ptKey
+                    };
+                }
+            }
+            
             await axios.post("/keys", params);
 
             this.getData();
@@ -312,11 +453,39 @@ class KeyManagement extends React.Component {
                 readonly: true,
                 mode: 'R'
             });
+            updateRow = false;
+            selectedData = {
+                lgKey: '',
+                psKey: '',
+                ptKey: ''
+            };
         } catch (e) {
             console.log(e);
         }
     }
+    _onBtnDeleteClick = async () => {
+        console.log(this.state.selectedData.idx);
+        var params = {
+            "queryType": "DELETE",
+            "idx": this.state.selectedData.idx
+        };
+        try {
+            await axios.post("/keys", params).then( res => {
+                if(res.data === 0) {
+                    this.getData();
+                    this.selectFirstNode();
+                } else if (res.data === 3) {
+                    this.setState({
+                        dialogOpen: true
+                    });
+                }
+            })
+        } catch (e) {
+            console.log(e);
+        }
 
+        
+    }
     text = () => {
         let keys = this.state.multi.map(single => single.value);
         if(keys.length < 1){
@@ -337,9 +506,7 @@ class KeyManagement extends React.Component {
 
 
     onSelectionChanged() {
-        console.log(this.gridApi);
         let selectedRows = this.gridApi.getSelectedRows()[0];
-        console.log(selectedRows);
         this.setState({
             selectedData: selectedRows
         });
@@ -348,10 +515,40 @@ class KeyManagement extends React.Component {
             readonly: true,
             mode: 'R'
         });
+
+        let selectedValues = [];
+
+        
+        let lgKeys = [],
+            psKeys = []
+        lgKeys = selectedRows.lgKey.split(">");
+        psKeys = selectedRows.psKey.split(":");
+        for (let i = 0, len = lgKeys.length; i < len; i++) {
+            selectedValues.push({
+                label: lgKeys[i],
+                value: psKeys[i]
+            })
+        }
+        this.setState({
+            ["multi"]: selectedValues
+        });
+        
     }
 
+    handleClickOpen = () => {
+        this.setState({
+            dialogOpen: true
+        });
+    };
+
+    handleClose = () => {
+        this.setState({
+            dialogOpen: false
+        });
+    };
+
     render() {
-        const { classes, theme } = this.props;
+        const { classes, theme, fullScreen} = this.props;
         const { multi } = this.state;
 
         const selectStyles = {
@@ -370,7 +567,7 @@ class KeyManagement extends React.Component {
                 Key Management
                 </Typography>
                 <CardContent>
-                    <Select
+                    < Select ref = 'selectBox'
                         classes={classes}
                         styles={selectStyles}
                         textFieldProps={{
@@ -387,10 +584,26 @@ class KeyManagement extends React.Component {
                         placeholder="Select Domains"
                         isMulti
                     />
+                    < TextField ref= 'keyPattern'
+                    id = "standard-full-width"
+                    label = "Key Pattern"
+                    placeholder = "Put the keys pattern"
+                    fullWidth
+                    margin = "normal"
+                    value={this.state.selectedData.ptKey}
+                    onChange={this.handleTextChange('ptKey')}
+                    InputLabelProps = {
+                        {
+                            shrink: true,
+                        }
+                    }
+                    />
                     <Button 
                         variant="contained" 
                         className={classes.button}
-                        onClick={this._onBtnAddClick.bind(this)}>
+                        onClick={ 
+                            this._onBtnAddClick.bind(this)
+                        }>
                         Add
                     </Button>
                     <Button 
@@ -403,7 +616,8 @@ class KeyManagement extends React.Component {
                     <Button 
                         variant="contained" 
                         className={classes.button}
-                        color = "secondary">
+                        color = "secondary"
+                        onClick = {this._onBtnDeleteClick.bind(this)}>
                         Delete
                     </Button>
                     {
@@ -431,8 +645,26 @@ class KeyManagement extends React.Component {
                             rowData={this.state.rowData}>
                         </AgGridReact>
                     </div>
+                    <Dialog
+                        fullScreen={fullScreen}
+                        open={this.state.dialogOpen}
+                        onClose={this.handleClose}
+                        aria-labelledby="responsive-dialog-title">
+                    <DialogTitle id="responsive-dialog-title">{"Can not remove seleted key"}</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                        The key is using now. Please retry after removing keys.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={this.handleClose} color="primary">
+                        Close
+                        </Button>
+                    </DialogActions>
+                    </Dialog>
                 </CardContent>
             </Card>
+            
         );
     }
 }

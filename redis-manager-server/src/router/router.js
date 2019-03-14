@@ -8,7 +8,8 @@ let redis = new Redis();
 let responseCode = {
     SUCCESS: '0',
     ERROR: '1',
-    DUPLICATION: '2'
+    DUPLICATION: '2',
+    USING: '3'
 }
 
 router.post("/domain", (req, res) => {
@@ -71,9 +72,6 @@ router.post("/domain", (req, res) => {
     }
 });
 
-let _removeIndexForKey = (psKey, cb) => {
-
-}
 
 let _getIndexForKey = (key, cb) => {
     redis.hget('c:ui', key, (err, keyIndex) => {
@@ -110,7 +108,7 @@ router.post("/keys", (req, res) =>{
             redis.sismember('c:km:rg', params.psKey, (err, keyExistance) => {
                 //If key exist
                 if (keyExistance === 0) {
-                    _getIndexForKey(params.psKey, (keyIndex)=> {
+                    _getIndexForKey('km', (keyIndex)=> {
                         //키를 추가
                         redis.pipeline([
                             ['set', `c:km:${keyIndex}:psKey`, params.psKey],
@@ -140,9 +138,9 @@ router.post("/keys", (req, res) =>{
         */
         case 'PUT':
             redis.pipeline([
-                ['set', `c:km:${params.keyIndex}:psKey`, params.psKey],
-                ['set', `c:km:${params.keyIndex}:lgKey`, params.lgKey],
-                ['set', `c:km:${params.keyIndex}:ptKey`, params.ptKey]
+                ['set', `c:km:${params.idx}:psKey`, params.psKey],
+                ['set', `c:km:${params.idx}:lgKey`, params.lgKey],
+                ['set', `c:km:${params.idx}:ptKey`, params.ptKey]
             ]).exec((err, result) => {
                 res.send(responseCode.SUCCESS);
             });
@@ -187,15 +185,22 @@ router.post("/keys", (req, res) =>{
                     key: domain key name
         */
         case 'DELETE':
-            redis.pipeline([
-                ['del', `c:km:${params.keyIndex}:psKey`],
-                ['del', `c:km:${params.keyIndex}:lgKey`],
-                ['del', `c:km:${params.keyIndex}:ptKey`],
-                ['del', `c:km:${params.keyIndex}:idx`],
-                ['srem', `c:km:rg`, params.keyIndex]
-            ]).exec((err, result) => {
-                res.send(responseCode.SUCCESS);
-            });
+            redis.scan(1, 'match', params.psKey, (err, keys) => {
+                if (keys[1].length > 0) {
+                    res.send(responseCode.USING);
+                } else {
+                    redis.pipeline([
+                        ['del', `c:km:${params.idx}:psKey`],
+                        ['del', `c:km:${params.idx}:lgKey`],
+                        ['del', `c:km:${params.idx}:ptKey`],
+                        ['del', `c:km:${params.idx}:idx`],
+                        ['srem', `c:km:rg`, params.idx]
+                    ]).exec((err, result) => {
+                        res.send(responseCode.SUCCESS);
+                    });
+                }
+            })
+            
             break;
 
         default:
