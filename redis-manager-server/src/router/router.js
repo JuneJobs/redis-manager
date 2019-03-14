@@ -114,6 +114,7 @@ router.post("/keys", (req, res) =>{
                             ['set', `c:km:${keyIndex}:psKey`, params.psKey],
                             ['set', `c:km:${keyIndex}:lgKey`, params.lgKey],
                             ['set', `c:km:${keyIndex}:ptKey`, params.ptKey],
+                            ['set', `c:km:${keyIndex}:tyKey`, params.tyKey],
                             ['set', `c:km:${keyIndex}:idx`, keyIndex],
                             ['sadd', 'c:km:rg', keyIndex]
                         ]).exec((err, result) => {
@@ -137,10 +138,12 @@ router.post("/keys", (req, res) =>{
                     lg: logical
         */
         case 'PUT':
+            console.log('>>',params);
             redis.pipeline([
                 ['set', `c:km:${params.idx}:psKey`, params.psKey],
                 ['set', `c:km:${params.idx}:lgKey`, params.lgKey],
-                ['set', `c:km:${params.idx}:ptKey`, params.ptKey]
+                ['set', `c:km:${params.idx}:ptKey`, params.ptKey],
+                ['set', `c:km:${params.idx}:tyKey`, params.tyKey],
             ]).exec((err, result) => {
                 res.send(responseCode.SUCCESS);
             });
@@ -154,7 +157,7 @@ router.post("/keys", (req, res) =>{
                 let pipeline = redis.pipeline();
 
                 keys.map((key) => {
-                    pipeline.mget(`c:km:${key}:idx`, `c:km:${key}:psKey`, `c:km:${key}:lgKey`, `c:km:${key}:ptKey`);
+                    pipeline.mget(`c:km:${key}:idx`, `c:km:${key}:psKey`, `c:km:${key}:lgKey`, `c:km:${key}:ptKey`, `c:km:${key}:tyKey`);
                 });
                 pipeline.exec((err, values) => {
                     //values[0].shift();
@@ -164,7 +167,8 @@ router.post("/keys", (req, res) =>{
                             idx: array[1][0], 
                             psKey: array[1][1],
                             lgKey: array[1][2],
-                            ptKey: array[1][3]
+                            ptKey: array[1][3],
+                            tyKey: array[1][4]
                         });
                     })
 
@@ -193,6 +197,7 @@ router.post("/keys", (req, res) =>{
                         ['del', `c:km:${params.idx}:psKey`],
                         ['del', `c:km:${params.idx}:lgKey`],
                         ['del', `c:km:${params.idx}:ptKey`],
+                        ['del', `c:km:${params.idx}:tyKey`],
                         ['del', `c:km:${params.idx}:idx`],
                         ['srem', `c:km:rg`, params.idx]
                     ]).exec((err, result) => {

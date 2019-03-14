@@ -4,6 +4,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import Select from 'react-select';
+import NativeSelect from "@material-ui/core/Select";
 import { withStyles } from '@material-ui/core/styles';
 import Card from '@material-ui/core/Card';
 //import CardActions from '@material-ui/core/CardActions';
@@ -21,7 +22,9 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
-import withMobileDialog from '@material-ui/core/withMobileDialog';
+import Input from "@material-ui/core/Input";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
 
 import axios from "axios";
 import {
@@ -38,6 +41,8 @@ const styles = theme => ({
     root: {
         flexGrow: 1,
         height: 250,
+        display: 'flex',
+        flexWrap: 'wrap',
     },
     input: {
         display: 'flex',
@@ -86,6 +91,10 @@ const styles = theme => ({
     },
     button: {
         margin: theme.spacing.unit,
+    },
+    formControl: {
+        //margin: theme.spacing.unit,
+        minWidth: 150,
     },
 });
 
@@ -222,46 +231,59 @@ class KeyManagement extends React.Component {
         super(props);
         this._getDomains();
         this.state = {
-            domains: [],
-            multi: null,
-            columnDefs: [{
-                headerName: "ID",
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            }, {
-                headerName: "Logical Key",
-                field: "lgKey",
-                editable: false,
-                width: 300,
-            }, {
-                headerName: "Physical Key",
-                field: "psKey",
-                editable: false,
-                width: 300,
-            }, {
-                headerName: "Key Pattern",
-                field: "ptKey",
-                editable: false,
-                width: 300,
-            }],
-            defaultColDef: {
-                width: 200,
-                editable: true,
-                filter: "agTextColumnFilter"
+          domains: [],
+          multi: null,
+          columnDefs: [
+            {
+              headerName: "ID",
+              width: 60,
+              editable: false,
+              valueGetter: "node.id"
             },
-            rowSelection: "single",
-            rowData: [],
-            selectedData: {
-                lgKey: '',
-                psKey: '',
-                ptKey: '',
-                idx: ''
+            {
+              headerName: "Logical Key",
+              field: "lgKey",
+              editable: false,
+              width: 300
             },
-            readonly: true,
-            mode: 'R',
-            dialogOpen: false
-        }
+            {
+              headerName: "Physical Key",
+              field: "psKey",
+              editable: false,
+              width: 300
+            },
+            {
+              headerName: "Key Pattern",
+              field: "ptKey",
+              editable: false,
+              width: 300
+            },
+            {
+              headerName: "Key Type",
+              field: "tyKey",
+              editable: false,
+              width: 300
+            }
+          ],
+          defaultColDef: {
+            width: 200,
+            editable: true,
+            filter: "agTextColumnFilter"
+          },
+          rowSelection: "single",
+          rowData: [],
+          selectedData: {
+            lgKey: "",
+            psKey: "",
+            ptKey: "",
+            tyKey: "Strings",
+            idx: ""
+          },
+          readonly: true,
+          mode: "R",
+          dialogOpen: false,
+          keyType: 'string'
+        };
     }
     _getDomains = async () => {
         let params = {
@@ -337,7 +359,8 @@ class KeyManagement extends React.Component {
                     idx: selectedRows.idx,
                     psKey: psKey,
                     lgKey: lgKey,
-                    ptKey: selectedRows.ptKey
+                    ptKey: selectedRows.ptKey,
+                    tyKey: selectedRows.tyKey
                 },
                 //rowData
             });
@@ -356,13 +379,22 @@ class KeyManagement extends React.Component {
                 idx: 0,
                 psKey: psKey,
                 lgKey: lgKey,
-                ptKey: ''
+                ptKey: '',
+                tyKey: 'Strings'
               },
               mode: 'W'
             });
         }
     };
-    
+    handleNativeSelectChange = event => {
+        this.setState({ 
+            selectedData: {
+                ...this.state.selectedData,
+                tyKey: event.target.value
+            }
+        });
+    };
+
     handleTextChange = name => event => {
         this.setState({
             selectedData: {
@@ -409,6 +441,7 @@ class KeyManagement extends React.Component {
                 lgKey: '',
                 psKey: '',
                 ptKey: '',
+                tyKey: 'Strings',
                 idx: ''
             },
             ["multi"]: [],
@@ -425,6 +458,7 @@ class KeyManagement extends React.Component {
                     "lgKey": this.state.selectedData.lgKey,
                     "psKey": this.state.selectedData.psKey,
                     "ptKey": this.state.selectedData.ptKey,
+                    "tyKey": this.state.selectedData.tyKey,
                 };
             } else {
                 if (updateRow) {
@@ -434,6 +468,7 @@ class KeyManagement extends React.Component {
                         "lgKey": selectedData.lgKey,
                         "psKey": selectedData.psKey,
                         "ptKey": this.state.selectedData.ptKey,
+                        "tyKey": this.state.selectedData.tyKey,
                     };
                 } else {
                     params = {
@@ -441,7 +476,8 @@ class KeyManagement extends React.Component {
                         idx: this.state.selectedData.idx,
                         lgKey: this.state.selectedData.lgKey,
                         psKey: this.state.selectedData.psKey,
-                        ptKey: this.state.selectedData.ptKey
+                        ptKey: this.state.selectedData.ptKey,
+                        tyKey: this.state.selectedData.tyKey
                     };
                 }
             }
@@ -457,7 +493,8 @@ class KeyManagement extends React.Component {
             selectedData = {
                 lgKey: '',
                 psKey: '',
-                ptKey: ''
+                ptKey: '',
+                tyKey: 'Strings'
             };
         } catch (e) {
             console.log(e);
@@ -563,97 +600,138 @@ class KeyManagement extends React.Component {
 
         return (
             <Card className={classes.card}>
-                <Typography variant="h6" color="inherit" className={classes._h6Spacing} noWrap>
-                Key Management
+                <Typography
+                    variant="h6"
+                    color="inherit"
+                    className={classes._h6Spacing}
+                    noWrap
+                >
+                    Key Management
                 </Typography>
                 <CardContent>
-                    < Select ref = 'selectBox'
+                    <Select
+                        ref="selectBox"
                         classes={classes}
                         styles={selectStyles}
                         textFieldProps={{
-                        label: 'Key',
-                        InputLabelProps: {
-                            shrink: true,
-                        },
+                            label: "Key",
+                            InputLabelProps: {
+                            shrink: true
+                            }
                         }}
                         options={this.state.domains}
                         components={components}
                         value={this.state.multi}
-                        onChange={this.handleChange('multi')}
+                        onChange={this.handleChange("multi")}
                         //onChange={this.onTextChange.bind(this)}
                         placeholder="Select Domains"
                         isMulti
                     />
-                    < TextField ref= 'keyPattern'
-                    id = "standard-full-width"
-                    label = "Key Pattern"
-                    placeholder = "Put the keys pattern"
-                    fullWidth
-                    margin = "normal"
-                    value={this.state.selectedData.ptKey}
-                    onChange={this.handleTextChange('ptKey')}
-                    InputLabelProps = {
-                        {
-                            shrink: true,
-                        }
-                    }
+                    <TextField
+                        ref="keyPattern"
+                        id="standard-full-width"
+                        label="Key Pattern"
+                        placeholder="Put the keys pattern"
+                        fullWidth
+                        margin="normal"
+                        value={this.state.selectedData.ptKey}
+                        onChange={this.handleTextChange("ptKey")}
+                        InputLabelProps={{
+                            shrink: true
+                        }}
                     />
-                    <Button 
-                        variant="contained" 
+                    <FormControl className={classes.formControl}>
+                    <InputLabel shrink htmlFor="key-type-label-placeholder">
+                        Key Type
+                    </InputLabel>
+                    <NativeSelect
+                        value={this.state.selectedData.tyKey}
+                        onChange={this.handleNativeSelectChange.bind(this)}
+                        input={
+                        <Input
+                            name="keyType"
+                            id="key-type-label-placeholder"
+                        />
+                        }
+                        name="keyType"
+                    >
+                        <MenuItem value={"Strings"}>Strings</MenuItem>
+                        <MenuItem value={"Lists"}>Lists</MenuItem>
+                        <MenuItem value={"Sets"}>Sets</MenuItem>
+                        <MenuItem value={"Hashes"}>Hashes</MenuItem>
+                        <MenuItem value={"SortedSets"}>SortedSets</MenuItem>
+                        <MenuItem value={"Bitmaps"}>Bitmaps</MenuItem>
+                        <MenuItem value={"HyperLogLogs"}>HyperLogLogs</MenuItem>
+                        <MenuItem value={"GeoSets"}>GeoSets</MenuItem>
+                    </NativeSelect>
+                    </FormControl>
+                    <Button
+                        variant="contained"
                         className={classes.button}
-                        onClick={ 
-                            this._onBtnAddClick.bind(this)
-                        }>
+                        onClick={this._onBtnAddClick.bind(this)}
+                        >
                         Add
                     </Button>
-                    <Button 
-                        variant="contained" 
+                    <Button
+                        variant="contained"
                         className={classes.button}
                         color="primary"
-                        onClick={this._onBtnSaveClick.bind(this)}>
+                        onClick={this._onBtnSaveClick.bind(this)}
+                        >
                         Save
                     </Button>
-                    <Button 
-                        variant="contained" 
+                    <Button
+                        variant="contained"
                         className={classes.button}
-                        color = "secondary"
-                        onClick = {this._onBtnDeleteClick.bind(this)}>
+                        color="secondary"
+                        onClick={this._onBtnDeleteClick.bind(this)}
+                        >
                         Delete
                     </Button>
-                    {
-                        multi === null && <div><Typography variant="title" gutterBottom>
-                        </Typography></div>
-                    }
-                    {
-                        multi !== null && <div><Typography variant="title" gutterBottom>
-                            {this.text()}
-                        </Typography></div>
-                    }
-                    <div 
+                    {multi === null && (
+                    <div>
+                        <Typography variant="title" gutterBottom />
+                    </div>
+                    )}
+                    {multi !== null && (
+                    <div>
+                        <Typography variant="title" gutterBottom>
+                        {this.text()}
+                        </Typography>
+                    </div>
+                    )}
+                    <div
                     id="myGrid"
                     style={{
-                    height: "100%",
-                    width: "100%"
+                        height: "100%",
+                        width: "100%"
                     }}
-                    className="ag-theme-balham">
-                        <AgGridReact
-                            columnDefs={this.state.columnDefs}
-                            defaultColDef={this.state.defaultColDef}
-                            rowSelection={this.state.rowSelection}
-                            onGridReady={this.onGridReady}
-                            onSelectionChanged={this.onSelectionChanged.bind(this)}
-                            rowData={this.state.rowData}>
-                        </AgGridReact>
+                    className="ag-theme-balham"
+                    >
+                    <AgGridReact
+                        columnDefs={this.state.columnDefs}
+                        defaultColDef={this.state.defaultColDef}
+                        rowSelection={this.state.rowSelection}
+                        onGridReady={this.onGridReady}
+                        onSelectionChanged={this.onSelectionChanged.bind(
+                        this
+                        )}
+                        rowData={this.state.rowData}
+                    />
                     </div>
                     <Dialog
-                        fullScreen={fullScreen}
-                        open={this.state.dialogOpen}
-                        onClose={this.handleClose}
-                        aria-labelledby="responsive-dialog-title">
-                    <DialogTitle id="responsive-dialog-title">{"Can not remove seleted key"}</DialogTitle>
+                    fullScreen={fullScreen}
+                    open={this.state.dialogOpen}
+                    onClose={this.handleClose}
+                    aria-labelledby="responsive-dialog-title"
+                    >
+                    <DialogTitle id="responsive-dialog-title">
+                        {"Can not remove seleted key"}
+                    </DialogTitle>
                     <DialogContent>
                         <DialogContentText>
-                        The key is using now. Please retry after removing keys.
+                        The key is using now. Please retry after removing
+                        keys.
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions>
@@ -664,7 +742,6 @@ class KeyManagement extends React.Component {
                     </Dialog>
                 </CardContent>
             </Card>
-            
         );
     }
 }
