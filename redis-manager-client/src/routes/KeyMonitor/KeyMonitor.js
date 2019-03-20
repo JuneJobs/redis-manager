@@ -54,7 +54,7 @@ const styles = theme => ({
         margin: theme.spacing.unit,
     },
     newCard: {
-        minWidth: 275,
+        minWidth: 575,
         minHeight: 200,
         margin: theme.spacing.unit,
     },
@@ -71,39 +71,52 @@ const styles = theme => ({
         minWidth: '100%',
     },
 });
+class Type1 extends Component {
+    render() {
+        const { classes } = this.props;
+        return (
+          <div>
+            <TextField
+              ref="txtKeyName"
+              id="txtKeyName"
+              label="Key"
+              //placeholder="Put the keys pattern"
+              fullWidth
+              margin="normal"
+              // value={this.state.selectedData.ptKey}
+              //onChange={this.handleTextChange("ptKey")}
+              InputLabelProps={{
+                shrink: true
+              }}
+            />
+          </div>
+        );
+    }
+};
 
 class Domain extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            columnDefs: [{
-                headerName: "Logical Domain",
-                field: "key",
-                align: "right",
-                width: 200,
-                //headerCheckboxSelection: true,
-                //checkboxSelection: true,
-                editable: false
-            }, {
-                headerName: "Physical Domain",
-                field: "value",
-                editable: false
-            }],
-            defaultColDef: {
-                width: 200,
-                editable: true,
-                filter: "agTextColumnFilter"
-            },
-            rowSelection: "single",
-            rowData: [],
-            selectedData: {
-                key: '',
-                value: ''
-            },
-            readonly: true,
-            mode: 'R',
-            numChildren: 0
+            numChildren: 0,
+            monitorList: []
+        }
+        //첫번째 포맷에 들어가야 하는 것
+        //키 선택, 키 조회
+        this.monitorFormat = {
+            key: 's:m:v',
+        }
 
+        //Data format
+        this.form = {
+            pageSetting: {
+                idx: 1,
+                title: 'This is Title',
+                type: 1,
+                ord: 0,
+                cnt: 100,
+                reInt: 1000
+            }
         }
     }
 
@@ -185,14 +198,27 @@ class Domain extends Component {
                 <DialogTitle id="form-dialog-title">Add a new monitor</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Please pick one of the key type
+                        Please pick one of the key type.
                     </DialogContentText>
+                    <TextField
+                        ref="txtTitle"
+                        id="txtTitle"
+                        label="Monitor Title"
+                        //placeholder="Put the keys pattern"
+                        fullWidth
+                        margin="normal"
+                        // value={this.state.selectedData.ptKey}
+                        //onChange={this.handleTextChange("ptKey")}
+                        InputLabelProps={{
+                            shrink: true
+                        }}
+                    />
                     <FormControl className={classes.formControl}>
                         <InputLabel shrink htmlFor="key-type-label-placeholder">
                             Key Type
                         </InputLabel>
                         <NativeSelect
-                            value={this.state.selectedData.tyKey}
+                            //value={this.state.selectedData.tyKey}
                             //onChange={this.handleNativeSelectChange.bind(this)}
                             input={
                             <Input
@@ -202,12 +228,13 @@ class Domain extends Component {
                             }
                             name="keyType"
                         >
-                            <MenuItem value={"Strings"}>Type 1: Simple Key</MenuItem>
-                            <MenuItem value={"Lists"}>Type 2: Pattern Key</MenuItem>
-                            <MenuItem value={"Sets"}>Type 3</MenuItem>
-                            <MenuItem value={"Hashes"}>Type 4</MenuItem>
+                            <MenuItem value={"1"}>Simple Key</MenuItem>
+                            <MenuItem value={"2"}>Pattern Key</MenuItem>
+                            <MenuItem value={"3"}>Type 3</MenuItem>
+                            <MenuItem value={"4"}>Type 4</MenuItem>
                         </NativeSelect>
                     </FormControl>
+                    <Type1/>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={this.handleAddButton.bind(this)} color="primary">
