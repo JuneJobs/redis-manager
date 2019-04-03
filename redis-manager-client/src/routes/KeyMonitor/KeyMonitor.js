@@ -128,7 +128,8 @@ class Domain extends Component {
     handleAddButton = () => {
         this.setState({
             numChildren: this.state.numChildren + 1,
-            open:false
+            open:false,
+            monitorFormat: 'type1'
         });
     };
 
@@ -140,9 +141,11 @@ class Domain extends Component {
 
     ChildComponent = props => {
         const { classes } = this.props;
+        const { monitorFormat } = props;
         return (
             <Card className={classes.newCard}>
                 <div className={classes.addMonitor}>
+                {monitorFormat}
                 </div>
             </Card>
         );
@@ -155,10 +158,11 @@ class Domain extends Component {
         const children = [];        
         for (var i = 0; i < this.state.numChildren; i += 1) {
             children.push(
-                <this.ChildComponent 
-                    key={i} 
-                    number={i} 
-                />
+              <this.ChildComponent
+                    key={i}
+                    number={i}
+                    monitorFormat={this.state.monitorFormat}
+              />
             );
         };
 
@@ -218,7 +222,7 @@ class Domain extends Component {
                             Key Type
                         </InputLabel>
                         <NativeSelect
-                            //value={this.state.selectedData.tyKey}
+                            //lue={this.state.selectedData.tyKey}
                             //onChange={this.handleNativeSelectChange.bind(this)}
                             input={
                             <Input
