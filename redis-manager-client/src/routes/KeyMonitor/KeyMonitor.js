@@ -28,7 +28,9 @@ import MenuItem from '@material-ui/core/MenuItem';
 import NativeSelect from "@material-ui/core/Select";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
-
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from "@material-ui/core/Switch";
+import CachedIcon from '@material-ui/icons/Cached';
 const styles = theme => ({
     container: {
         display: 'flex',
@@ -41,6 +43,19 @@ const styles = theme => ({
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
         width: 200,
+    },
+    txtType: {
+        marginLeft: theme.spacing.unit,
+        marginRight: theme.spacing.unit,
+        width: 100,
+    },
+    Switch: {
+        marginRight: theme.spacing.unit,
+        marginTop: 23
+    },
+    Fab: {
+        marginRight: theme.spacing.unit,
+        marginTop: 23
     },
     dense: {
         marginTop: 19,
@@ -65,13 +80,16 @@ const styles = theme => ({
         textAlign: 'right',
         width: '100%'
     },
+    closeCard: {
+        textAlign: 'right',
+    },
     open: false,
     formControl: {
         //margin: theme.spacing.unit,
-        minWidth: '100%',
-    },
+        minWidth: 500,
+    }
 });
-class Type1 extends Component {
+class KeyString extends Component {
     render() {
         const { classes } = this.props;
         return (
@@ -94,18 +112,52 @@ class Type1 extends Component {
     }
 };
 
+class SearchSec extends Component {
+    render() {
+        const { classes } = this.props;
+        return (
+          <div>
+            <TextField
+              ref="txtKeyName"
+              id="txtKeyName"
+              label="Search Seconds"
+              //placeholder="Put the keys pattern"
+              fullWidth
+              margin="normal"
+              // value={this.state.selectedData.ptKey}
+              //onChange={this.handleTextChange("ptKey")}
+              InputLabelProps={{
+                shrink: true
+              }}
+            />
+          </div>
+        );
+    }
+};
+
 class Domain extends Component {
     constructor(props) {
         super(props);
         this.state = {
             numChildren: 0,
-            monitorList: []
+            cardDataSet: [{
+                id: 1,
+                title: 'user key monitor',
+                sec: 5,
+                auto: true,
+                type: 'single',
+                searchString: 'user:seq'
+            }, {
+                id:2,
+                title: 'user name monitor',
+                sec: 5,
+                auto: true,
+                type: 'single',
+                searchString: 'user:name'
+            }]
         }
         //첫번째 포맷에 들어가야 하는 것
         //키 선택, 키 조회
-        this.monitorFormat = {
-            key: 's:m:v',
-        }
 
         //Data format
         this.form = {
@@ -129,7 +181,14 @@ class Domain extends Component {
         this.setState({
             numChildren: this.state.numChildren + 1,
             open:false,
-            monitorFormat: 'type1'
+            cardDataSet: [...this.state.cardDataSet, {
+                id: 3,
+                title: 'user birth monitor',
+                sec: 5,
+                auto: true,
+                type: 'single',
+                searchString: 'user:birth'
+            }]
         });
     };
 
@@ -141,12 +200,63 @@ class Domain extends Component {
 
     ChildComponent = props => {
         const { classes } = this.props;
-        const { monitorFormat } = props;
+        const { cardDataSet, idx } = props;
+
+        console.log(this.state.cardDataSet[idx]);
         return (
             <Card className={classes.newCard}>
+                <Typography variant="h6" color="inherit" className={classes._h6Spacing} noWrap>
+                    {cardDataSet[idx].title}
+                </Typography>
                 <div className={classes.addMonitor}>
-                {monitorFormat}
+                    <Button color="secondary" className={classes.button}>
+                        X
+                    </Button>
                 </div>
+                <TextField
+                    id="standard-name"
+                    label="Search Key"
+                    className={classes.textField}
+                    value={cardDataSet[idx].searchString}
+                    //onChange={this.handleChange('name')}
+                    margin="normal"
+                />
+                <TextField
+                    id="standard-name2"
+                    label="Type"
+                    className={classes.txtType}
+                    value={cardDataSet[idx].type}
+                    //onChange={this.handleChange('name')}
+                    margin="normal"
+                />
+                <TextField
+                    id="standard-name2"
+                    label="Auto search seconds"
+                    className={classes.textField}
+                    value={cardDataSet[idx].sec}
+                    //onChange={this.handleChange('name')}
+                    margin="normal"
+                />
+                <FormControlLabel
+                    className={classes.Switch}
+                    control={
+                        <Switch
+                            //checked={this.state.checkedA}
+                            //onChange={this.handleChange('checkedA')}
+                            value={cardDataSet[idx].auto}
+                        />
+                    }
+                    label="Auto search"
+                />
+                <Fab
+                variant="extended"
+                size="small"
+                //color="extended"
+                aria-label="Add"
+                className={classes.Fab}
+                >
+                <CachedIcon className={classes.extendedIcon} />
+                </Fab>
             </Card>
         );
     };   
@@ -160,8 +270,10 @@ class Domain extends Component {
             children.push(
               <this.ChildComponent
                     key={i}
-                    number={i}
-                    monitorFormat={this.state.monitorFormat}
+                    idx={i}
+                    cardDataSet = {
+                        this.state.cardDataSet
+                    }
               />
             );
         };
@@ -222,7 +334,7 @@ class Domain extends Component {
                             Key Type
                         </InputLabel>
                         <NativeSelect
-                            //lue={this.state.selectedData.tyKey}
+                            value={"1"}
                             //onChange={this.handleNativeSelectChange.bind(this)}
                             input={
                             <Input
@@ -232,13 +344,12 @@ class Domain extends Component {
                             }
                             name="keyType"
                         >
-                            <MenuItem value={"1"}>Simple Key</MenuItem>
-                            <MenuItem value={"2"}>Pattern Key</MenuItem>
-                            <MenuItem value={"3"}>Type 3</MenuItem>
-                            <MenuItem value={"4"}>Type 4</MenuItem>
+                            <MenuItem value={"1"}>Single</MenuItem>
+                            <MenuItem value={"2"}>Multiple</MenuItem>
                         </NativeSelect>
                     </FormControl>
-                    <Type1/>
+                    <KeyString/>
+                    <SearchSec/>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={this.handleAddButton.bind(this)} color="primary">
