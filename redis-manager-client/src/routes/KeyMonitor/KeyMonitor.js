@@ -44,6 +44,11 @@ const styles = theme => ({
         marginRight: theme.spacing.unit,
         width: 200,
     },
+    txtStructure: {
+        marginLeft: theme.spacing.unit,
+        marginRight: theme.spacing.unit,
+        width: 100
+    },
     txtType: {
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
@@ -138,6 +143,101 @@ class SearchSec extends Component {
 class Domain extends Component {
     constructor(props) {
         super(props);
+        this.gridKeyType = {
+            string: [{
+                headerName: "ID",
+                type: 'string',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            },{
+                headerName: "value",
+                field: "value",
+                editable: false,
+                width: 200
+            }],
+            list: [{
+                headerName: "ID",
+                type: 'list',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            },{
+                headerName: "values",
+                field: "values",
+                editable: false,
+                width: 200
+            }],
+            set: [{
+                headerName: "ID",
+                type: 'set',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            },{
+                headerName: "member",
+                field: "member",
+                editable: false,
+                width: 200
+            }],
+            sortedSet: [{
+                headerName: "ID",
+                type: 'sortedSet',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            },{
+                headerName: "score",
+                field: "score",
+                editable: false,
+                width: 200
+            },{
+                headerName: "member",
+                field: "member",
+                editable: false,
+                width: 200
+            }],
+            geoSet: [{
+                headerName: "ID",
+                type: 'geoSet',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            },{
+                headerName: "longitude",
+                field: "lng",
+                editable: false,
+                width: 200
+            },{
+                headerName: "latitude",
+                field: "lat",
+                editable: false,
+                width: 200
+            },{
+                headerName: "member",
+                field: "member",
+                editable: false,
+                width: 200
+            }],
+            hash: [{
+                headerName: "ID",
+                type: 'hash',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            },{
+                headerName: "field",
+                field: "field",
+                editable: false,
+                width: 200
+            },{
+                headerName: "value",
+                field: "value",
+                editable: false,
+                width: 200
+            }]
+        };
+
         this.state = {
             numChildren: 0,
             cardDataSet: [{
@@ -146,15 +246,23 @@ class Domain extends Component {
                 sec: 5,
                 auto: true,
                 type: 'single',
-                searchString: 'user:seq'
+                searchString: 'user:seq',
+                dataType: 'string'
             }, {
                 id:2,
                 title: 'user name monitor',
                 sec: 5,
-                auto: true,
+                auto: false,
                 type: 'single',
-                searchString: 'user:name'
-            }]
+                searchString: 'user:name',
+                dataType: 'hash'
+            }],
+            defaultColDef: {
+                width: 200,
+                editable: true,
+                filter: "agTextColumnFilter"
+            },
+            rowSelection: "single"
         }
         //첫번째 포맷에 들어가야 하는 것
         //키 선택, 키 조회
@@ -187,7 +295,9 @@ class Domain extends Component {
                 sec: 5,
                 auto: true,
                 type: 'single',
-                searchString: 'user:birth'
+                searchString: 'user:birth',
+                dataType: 'string',
+                rowData: {}
             }]
         });
     };
@@ -196,6 +306,19 @@ class Domain extends Component {
         this.setState({
             open: false
         });
+    };
+    getData = (columnDefs) => {
+        
+        return {
+            value: '901028'
+        }
+    }
+
+    onGridReady = (params) => {
+        this.gridApi = params.api;
+        this.gridColumnApi = params.columnApi;
+        this.getData(this.columnDefs);
+        //this.onSelectionChanged()
     };
 
     ChildComponent = props => {
@@ -223,6 +346,14 @@ class Domain extends Component {
                 />
                 <TextField
                     id="standard-name2"
+                    label="Data Structure"
+                    className={classes.txtStructure}
+                    value={cardDataSet[idx].dataType}
+                    //onChange={this.handleChange('name')}
+                    margin="normal"
+                />
+                <TextField
+                    id="standard-name2"
                     label="Type"
                     className={classes.txtType}
                     value={cardDataSet[idx].type}
@@ -241,7 +372,7 @@ class Domain extends Component {
                     className={classes.Switch}
                     control={
                         <Switch
-                            //checked={this.state.checkedA}
+                            checked={cardDataSet[idx].auto}
                             //onChange={this.handleChange('checkedA')}
                             value={cardDataSet[idx].auto}
                         />
@@ -249,14 +380,31 @@ class Domain extends Component {
                     label="Auto search"
                 />
                 <Fab
-                variant="extended"
-                size="small"
-                //color="extended"
-                aria-label="Add"
-                className={classes.Fab}
+                    variant="extended"
+                    size="small"
+                    //color="extended"
+                    aria-label="Add"
+                    className={classes.Fab}
                 >
                 <CachedIcon className={classes.extendedIcon} />
                 </Fab>
+                <div
+                    id="myGrid"
+                    style={{
+                        height: "100%",
+                        width: "100%"
+                    }}
+                    className="ag-theme-balham"
+                    >
+                    <AgGridReact
+                        columnDefs={this.gridKeyType[cardDataSet[idx].dataType]}
+                        defaultColDef={this.state.defaultColDef}
+                        rowSelection={this.state.rowSelection}
+                        onGridReady={this.onGridReady}
+                        //onSelectionChanged={this.onSelectionChanged.bind(this)}
+                        rowData={this.state.rowData}
+                    />
+                </div>
             </Card>
         );
     };   
