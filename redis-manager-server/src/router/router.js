@@ -5,74 +5,19 @@ const LlRequest = require("../lib/ISRequest");
 
 const Redis = require("ioredis");
 let redis = new Redis();
-let responseCode = {
+let resCode = {
     SUCCESS: '0',
     ERROR: '1',
     DUPLICATION: '2',
-    USING: '3'
+    USING: '3',
+    NOT_EXIST: '4'
+}
+let response = {
+    resCode = '',
+    payload = []
 }
 
-router.post("/domain", (req, res) => {
-    let param = req.body;
-    switch (param.queryType) {
-        /*  URI     /domain
-            param   queryType: POST
-                    py: physical
-                    lg: logical
-        */
-        case 'POST':
-            redis.set(`c:dm:${param.py}`, param.lg);
-                res.send(responseCode.SUCCESS);
-            break;
-
-         /* URI     /domain
-            
-            param   queryType: PUT
-                    py: physical
-                    lg: logical
-        */
-        case 'PUT':
-            redis.set(`c:dm:${param.py}`, param.lg);
-                res.send(responseCode.SUCCESS);
-            break;
-        
-        /*  URI     /domain
-            param   queryType: GET
-        */
-        case 'GET':
-            redis.keys(`c:dm:*`, (err, keys) => {
-                console.log(keys);
-                let pipeline = redis.pipeline();
-                keys.map((key) => {pipeline.get(key)});
-                pipeline.exec((err, values) => {
-                    let responseJson = [];
-                    values.map((array, index) => {
-                        responseJson.push({
-                            'key': keys[index].slice(5),
-                            'value': array[1]
-                        });
-                    });
-                    res.send(responseJson);
-                });
-
-            });
-            break;
-        
-        /*  URI     /domain
-            param   queryType: DELETE
-                    key: domain key name
-        */
-        case 'DELETE':
-            redis.del(`c:dm:${param.key}`);
-            res.send(responseCode.SUCCESS);
-            break;
-
-        default:
-            break;
-    }
-});
-
-
+//Index maker
 let _getIndexForKey = (key, cb) => {
     redis.hget('c:ui', key, (err, keyIndex) => {
         if (keyIndex !== null) {
@@ -87,128 +32,160 @@ let _getIndexForKey = (key, cb) => {
     });
 }
 
-router.post("/keys", (req, res) =>{
+let _notExists = (key) => {
+    if(key===null) {
+        return true;
+    } else {
+        return false;
+    }
+}
+let _Exists = (key) => {
+    if(key===null) {
+        return false
+    } else {
+        return true
+    }
+} 
+
+redis.monitor((err, monitor) => {
+    monitor.on('monitor', (time, args, source, database) => {
+        console.log('Redis monitor>', time, args, source, database);
+    });
+});
+
+router.post("/domain", (req, res) => {
     let params = req.body;
-    console.log(params)
-    switch (params.queryType) {
-        /*  URI     /key
-            Param   queryType: POST
-                    psKey: physical Key
-                    lgKey: logical Key
-                    ptKey: pattern Key for *
-            Description  키를 처음 등록할 때 서버에 키가 이미 저장 되어 있는지 확인
-                         없을 경우 추가
-                            key example
-                                c:km:1:psKey
-                                c:km:1:lgKey
-                                c:km:1:ptKey
-                         있을 경우 중복
-        */
+    switch (params.queryType) { 
         case 'POST':
-            redis.sismember('c:km:rg', params.psKey, (err, keyExistance) => {
-                //If key exist
-                if (keyExistance === 0) {
-                    _getIndexForKey('km', (keyIndex)=> {
-                        //키를 추가
-                        redis.pipeline([
-                            ['set', `c:km:${keyIndex}:psKey`, params.psKey],
-                            ['set', `c:km:${keyIndex}:lgKey`, params.lgKey],
-                            ['set', `c:km:${keyIndex}:ptKey`, params.ptKey],
-                            ['set', `c:km:${keyIndex}:tyKey`, params.tyKey],
-                            ['set', `c:km:${keyIndex}:idx`, keyIndex],
-                            ['sadd', 'c:km:rg', keyIndex]
-                        ]).exec((err, result) => {
-                            res.send(responseCode.SUCCESS);
+            /*  URI     /domain
+                param   queryType: POST
+                        psDom: Physical Domain
+                        lgDom: Logical Domain
+            */
+            redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
+                if(err) { return console.log(err); } else { 
+                    if (_notExists(idDom)) {
+                        //create idDom
+                        _getIndexForKey('dm', (newIdDom) => {
+                            redis.multi([
+                                [`set`, `c:dm:${newIdDom}:psDom`, params.psDom],
+                                [`set`, `c:dm:${newIdDom}:lgDom`, params.lgDom],
+                                [`set`, `c:dm:${newIdDom}:idDom`, newIdDom],
+                                [`hset`, `c:dm:search:psDom:idDom`, params.psDom, newIdDom]
+                            ]).exec((err, result)=> {
+                                if(err) { return console.log(err); } else { 
+                                    response.resCode = resCode.SUCCESS;
+                                    response.payload = [];
+                                    res.send(response);
+                                }
+                            })
                         });
-
-                    });
-                
-                //If key does not exist
-                } else {
-                    res.send(responseCode.DUPLICATION);
+                    } else {
+                        response.resCode = resCode.DUPLICATION;
+                        response.payload = [];
+                        res.send(response);
+                    }
                 }
-            });  
-
+            });
             break;
-
-         /* URI     /key
-            
-            param   queryType: PUT
-                    py: physical
-                    lg: logical
-        */
         case 'PUT':
-            console.log('>>',params);
-            redis.pipeline([
-                ['set', `c:km:${params.idx}:psKey`, params.psKey],
-                ['set', `c:km:${params.idx}:lgKey`, params.lgKey],
-                ['set', `c:km:${params.idx}:ptKey`, params.ptKey],
-                ['set', `c:km:${params.idx}:tyKey`, params.tyKey],
-            ]).exec((err, result) => {
-                res.send(responseCode.SUCCESS);
-            });
-            break;
-        
-        /*  URI     /key
-            param   queryType: GET
-        */
-        case 'GET':
-            redis.smembers('c:km:rg', (err, keys) => {
-                let pipeline = redis.pipeline();
-
-                keys.map((key) => {
-                    pipeline.mget(`c:km:${key}:idx`, `c:km:${key}:psKey`, `c:km:${key}:lgKey`, `c:km:${key}:ptKey`, `c:km:${key}:tyKey`);
-                });
-                pipeline.exec((err, values) => {
-                    //values[0].shift();
-                    let responseJson = [];
-                    values.map((array) => {
-                        responseJson.push({
-                            idx: array[1][0], 
-                            psKey: array[1][1],
-                            lgKey: array[1][2],
-                            ptKey: array[1][3],
-                            tyKey: array[1][4]
-                        });
-                    })
-
-                    console.log(responseJson);
-                    
-                    // let responseJson = [];
-                    // values.map((array, index) => {
-                    //     responseJson.push(array);
-                    // });
-                     res.send(responseJson);
-                });
-                //res.send(keys);
-            });
-            break;
-        
-        /*  URI     /key
-            param   queryType: DELETE
-                    key: domain key name
-        */
-        case 'DELETE':
-            redis.scan(1, 'match', params.psKey, (err, keys) => {
-                if (keys[1].length > 0) {
-                    res.send(responseCode.USING);
-                } else {
-                    redis.pipeline([
-                        ['del', `c:km:${params.idx}:psKey`],
-                        ['del', `c:km:${params.idx}:lgKey`],
-                        ['del', `c:km:${params.idx}:ptKey`],
-                        ['del', `c:km:${params.idx}:tyKey`],
-                        ['del', `c:km:${params.idx}:idx`],
-                        ['srem', `c:km:rg`, params.idx]
-                    ]).exec((err, result) => {
-                        res.send(responseCode.SUCCESS);
-                    });
+            /*  URI     /domain
+                param   queryType: PUT
+                        psDom: Physical Domain
+                        lgDom: Logical Domain
+            */
+            redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
+                if (err) { return console.log(err); } else {
+                    if (_Exists(idDom)) {
+                        redis.multi([
+                            [`set`, `c:dm:${idDom}:lgDom`, params.lgDom]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        })
+                        
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
                 }
-            })
-            
-            break;
+            });
+        case 'GET':
+            /*  URI     /domain
+                param   queryType: GET
+            */
+            redis.scan(0, "match", "c:dm:*:idDom", "count", "1000", (err, idDoms) => {
+                if (err) { return console.log(err); } else { 
+                    if(idDoms[1].length !== 0) {
+                        //cmdSet
+                        let commandSet = [];
+                        idDoms[1].map((array, index) => {
+                            commandSet.push([`mget`, `c:dm:${index}:psDom`, `c:dm:${index}:lgDom`]);
+                        });
+                        //execute domain list searching
+                        redis.multi(commandSet).exec((err, replies) => {
+                            let resJson = [];
+                            replies.map((array, index) => {
+                                resJson.push({
+                                    'psDom': array[0],
+                                    'lgDom': array[1]
+                                });
+                            });
+                            response.resCode = resCode.SUCCESS;
+                            response.payload = resJson;
+                            res.send(response);
+                        });
+                    } else {
+                        response.resCode = resCode.SUCCESS;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+        case `DELETE`:
+            /*  URI     /domain
+                param   queryType: DELETE
+                        psKey: Physical Domain
+            */
+            redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idDom)) {
+                        //check if it is used to key
+                        redis.smembers(`c:dm:${idDom}:used`, (err, idKeys) => {
+                            if(_notExists(idKeys)) {
+                                redis.multi([
+                                    [`del`, `c:dm:${idDom}:psDom`],
+                                    [`del`, `c:dm:${idDom}:lgDom`],
+                                    [`del`, `c:dm:${idDom}:idDom`],
+                                    [`hdel`, `c:dm:search:psDom:idDom`, params.psDom]
+                                ]).exec((err, result) => {
+                                    if (err) {
+                                        return console.log(err);
+                                    } else {
+                                        response.resCode = resCode.SUCCESS;
+                                        response.payload = [];
+                                        res.send(response);
+                                    }
+                                })
+                            } else {
+                                response.resCode = resCode.USING;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
 
-        default:
-            break;
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
     }
 });

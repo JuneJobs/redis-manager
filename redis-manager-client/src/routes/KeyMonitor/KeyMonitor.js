@@ -247,7 +247,8 @@ class Domain extends Component {
                 auto: true,
                 type: 'single',
                 searchString: 'user:seq',
-                dataType: 'string'
+                dataType: 'string',
+                rowData: []
             }, {
                 id:2,
                 title: 'user name monitor',
@@ -255,14 +256,15 @@ class Domain extends Component {
                 auto: false,
                 type: 'single',
                 searchString: 'user:name',
-                dataType: 'hash'
+                dataType: 'hash',
+                rowData: []
             }],
             defaultColDef: {
                 width: 200,
                 editable: true,
                 filter: "agTextColumnFilter"
             },
-            rowSelection: "single"
+            rowSelection: "single",
         }
         //첫번째 포맷에 들어가야 하는 것
         //키 선택, 키 조회
@@ -286,6 +288,7 @@ class Domain extends Component {
         });
     };
     handleAddButton = () => {
+        console.log(this.state);
         this.setState({
             numChildren: this.state.numChildren + 1,
             open:false,
@@ -297,9 +300,10 @@ class Domain extends Component {
                 type: 'single',
                 searchString: 'user:birth',
                 dataType: 'string',
-                rowData: {}
+                rowData: []
             }]
         });
+        console.log(this.state);
     };
 
     handleCloseButton = () => {
@@ -307,25 +311,52 @@ class Domain extends Component {
             open: false
         });
     };
-    getData = (columnDefs) => {
+    // getData = (idx) => {
         
-        return {
-            value: '901028'
-        }
-    }
+    // }
 
     onGridReady = (params) => {
         this.gridApi = params.api;
         this.gridColumnApi = params.columnApi;
-        this.getData(this.columnDefs);
+        //this.getData(this.onGridReady.idx);
+            
         //this.onSelectionChanged()
     };
+
+    bindData = (key, dataType, cb) => {
+        // var params = {
+        //     'key': key,
+        //     'dataType': dataType
+        // };
+        // try {
+        //     axios.post("/keys", params).then(res => {
+        //         cb(res.data);
+        //     });
+        // } catch (e) {
+        //     console.log(e);
+        // }
+        cb([{
+            value: 'hello'
+        }]);
+    }
+
+    componentDidMount() {
+        this.state.cardDataSet.map((item, idx)=> {
+            if (idx === 0){
+                this.setState(state => {
+                    this.bindData(item.searchString, item.dataType, (data) => {
+                        item.rowData = data;
+                    });
+                    //return {rowData};
+                })
+            }
+        });
+    }
 
     ChildComponent = props => {
         const { classes } = this.props;
         const { cardDataSet, idx } = props;
 
-        console.log(this.state.cardDataSet[idx]);
         return (
             <Card className={classes.newCard}>
                 <Typography variant="h6" color="inherit" className={classes._h6Spacing} noWrap>
@@ -397,12 +428,13 @@ class Domain extends Component {
                     className="ag-theme-balham"
                     >
                     <AgGridReact
+                        idx={this.onGridReady.idx = idx}
                         columnDefs={this.gridKeyType[cardDataSet[idx].dataType]}
                         defaultColDef={this.state.defaultColDef}
                         rowSelection={this.state.rowSelection}
                         onGridReady={this.onGridReady}
                         //onSelectionChanged={this.onSelectionChanged.bind(this)}
-                        rowData={this.state.rowData}
+                        rowData={ cardDataSet[idx].rowData}
                     />
                 </div>
             </Card>
