@@ -31,7 +31,6 @@ let _getIndexForKey = (key, cb) => {
         }
     });
 }
-
 let _notExists = (key) => {
     if(key===null) {
         return true;
@@ -187,5 +186,106 @@ router.post("/domain", (req, res) => {
                     }
                 }
             });
+    }
+});
+
+router.post("/keys", (req, res) => {
+    let params = req.body;
+    
+    switch (params.queryType) {
+        case 'POST':
+            /*  URI     /key
+                Param   queryType: POST
+                        psKey: physical Key
+                        lgKey: logical Key
+                        ptKey: pattern Key for *
+                Description  키를 처음 등록할 때 서버에 키가 이미 저장 되어 있는지 확인
+                                없을 경우 추가
+                                key example
+                                    c:km:1:psKey
+                                    c:km:1:lgKey
+                                    c:km:1:ptKey
+                                있을 경우 중복
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if(_notExists(idKey)) {
+                        _getIndexForKey('km', (newIdKey) => {
+                            let domains = params.psKey.split(':'),
+                                command = [`c:dm:search:psDom:idDom`, domains];
+                            redis.hmget(command, (err, idDoms) => {
+                                if (err) {
+                                    return console.log(err);
+                                } else {
+                                    let commandSet = [];
+                                    idDoms[0].map((idDom) => {
+                                        commandSet.push([`sadd`, `c:dm:${idDom}:used`, newIdKey]);
+                                    });
+                                    commandSet = [...commandSet, 
+                                        [`set`, `c:km:${newIdKey}:psKey`, params.psKey],
+                                        [`set`, `c:km:${newIdKey}:lgKey`, params.lgKey],
+                                        [`set`, `c:km:${newIdKey}:tyKey`, params.tyKey],
+                                        [`set`, `c:km:${newIdKey}:idKey`, newIdKey],
+                                        [`hset`, `c:km:search:psKey:idKey`, params.psKey, newIdKey]
+                                    ]
+                                    redis.multi(commandSet).exec((err, result) => {
+                                        if (err) {
+                                            return console.log(err);
+                                        } else {
+                                            response.resCode = resCode.SUCCESS;
+                                            response.payload = [];
+                                            res.send(response);
+                                        }
+                                    });
+                                }
+                            });
+                        });
+                    } else {
+                        response.resCode = resCode.DUPLICATION;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+
+        case 'PUT':
+            /* URI     /key
+               param   queryType: PUT
+                       lgKey: Logical key
+                       ptKey: Key pattern
+                       tyKey: Key type
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idKey)) {
+                        redis.pipeline([
+                            ['set', `c:km:${idKey}:lgKey`, params.lgKey],
+                            ['set', `c:km:${idKey}:ptKey`, params.ptKey],
+                            ['set', `c:km:${idKey}:tyKey`, params.tyKey],
+                        ]).exec((err, result) => {
+                            if (err) {
+                                return console.log(err);
+                            } else { 
+                                res.send(responseCode.SUCCESS);
+                            }
+                            
+                        });
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+        
+
+        case 'GET':
+            /*  URI     /key
+                param   queryType: GET
+            */
     }
 });
