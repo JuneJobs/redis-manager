@@ -13,8 +13,8 @@ let resCode = {
     NOT_EXIST: '4'
 }
 let response = {
-    resCode = '',
-    payload = []
+    resCode : '',
+    payload : []
 }
 
 //Index maker
@@ -32,14 +32,14 @@ let _getIndexForKey = (key, cb) => {
     });
 }
 let _notExists = (key) => {
-    if(key===null) {
+    if (key === null || key.length === 0) {
         return true;
     } else {
         return false;
     }
 }
 let _Exists = (key) => {
-    if(key===null) {
+    if (key === null || key.length === 0) {
         return false
     } else {
         return true
@@ -67,10 +67,10 @@ router.post("/domain", (req, res) => {
                         //create idDom
                         _getIndexForKey('dm', (newIdDom) => {
                             redis.multi([
-                                [`SET`, `c:dm:${newIdDom}:psDom`, params.psDom],
-                                [`SET`, `c:dm:${newIdDom}:lgDom`, params.lgDom],
-                                [`SET`, `c:dm:${newIdDom}:idDom`, newIdDom],
-                                [`HSET`, `c:dm:search:psDom:idDom`, params.psDom, newIdDom]
+                                [`set`, `c:dm:${newIdDom}:psDom`, params.psDom],
+                                [`set`, `c:dm:${newIdDom}:lgDom`, params.lgDom],
+                                [`set`, `c:dm:${newIdDom}:idDom`, newIdDom],
+                                [`hset`, `c:dm:search:psDom:idDom`, params.psDom, newIdDom]
                             ]).exec((err, result)=> {
                                 if(err) { return console.log(err); } else { 
                                     response.resCode = resCode.SUCCESS;
@@ -97,7 +97,7 @@ router.post("/domain", (req, res) => {
                 if (err) { return console.log(err); } else {
                     if (_Exists(idDom)) {
                         redis.multi([
-                            [`SET`, `c:dm:${idDom}:lgDom`, params.lgDom]
+                            [`set`, `c:dm:${idDom}:lgDom`, params.lgDom]
                         ]).exec((err, result) => {
                             if (err) { return console.log(err); } else {
                                 response.resCode = resCode.SUCCESS;
@@ -113,25 +113,30 @@ router.post("/domain", (req, res) => {
                     }
                 }
             });
+            break;
         case 'GET':
             /*  URI     /domain
                 param   queryType: GET
             */
             redis.scan(0, "match", "c:dm:*:idDom", "count", "1000", (err, idDoms) => {
-                if (err) { return console.log(err); } else { 
+                if (err) {
+                    return console.log(err);
+                } else {
+                    idDoms[1].splice(idDoms[1].indexOf("c:dm:search:psDom:idDom"), 1)
                     if(idDoms[1].length !== 0) {
                         //cmdSet
                         let commandSet = [];
                         idDoms[1].map((array, index) => {
-                            commandSet.push([`MGET`, `c:dm:${index}:psDom`, `c:dm:${index}:lgDom`]);
+                            let idDom = parseInt(array.split(":")[2]);
+                            commandSet.push([`mget`, `c:dm:${idDom}:psDom`, `c:dm:${idDom}:lgDom`]);
                         });
                         //execute domain list searching
                         redis.multi(commandSet).exec((err, replies) => {
                             let resJson = [];
                             replies.map((array, index) => {
                                 resJson.push({
-                                    'psDom': array[0],
-                                    'lgDom': array[1]
+                                    'psDom': array[1][0],
+                                    'lgDom': array[1][1]
                                 });
                             });
                             response.resCode = resCode.SUCCESS;
@@ -145,10 +150,11 @@ router.post("/domain", (req, res) => {
                     }
                 }
             });
+            break;
         case `DELETE`:
             /*  URI     /domain
                 param   queryType: DELETE
-                        psKey: Physical Domain
+                        psDom: Physical Domain
             */
             redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
                 if (err) {
@@ -159,10 +165,10 @@ router.post("/domain", (req, res) => {
                         redis.smembers(`c:dm:${idDom}:used`, (err, idKeys) => {
                             if(_notExists(idKeys)) {
                                 redis.multi([
-                                    [`DEL`, `c:dm:${idDom}:psDom`],
-                                    [`DEL`, `c:dm:${idDom}:lgDom`],
-                                    [`DEL`, `c:dm:${idDom}:idDom`],
-                                    [`HDEL`, `c:dm:search:psDom:idDom`, params.psDom]
+                                    [`del`, `c:dm:${idDom}:psDom`],
+                                    [`del`, `c:dm:${idDom}:lgDom`],
+                                    [`del`, `c:dm:${idDom}:idDom`],
+                                    [`hdel`, `c:dm:search:psDom:idDom`, params.psDom]
                                 ]).exec((err, result) => {
                                     if (err) {
                                         return console.log(err);
@@ -221,14 +227,14 @@ router.post("/keys", (req, res) => {
                                 } else {
                                     let commandSet = [];
                                     idDoms[0].map((idDom) => {
-                                        commandSet.push([`SADD`, `c:dm:${idDom}:used`, newIdKey]);
+                                        commandSet.push([`sadd`, `c:dm:${idDom}:used`, newIdKey]);
                                     });
                                     commandSet = [...commandSet, 
-                                        [`SET`, `c:km:${newIdKey}:psKey`, params.psKey],
-                                        [`SET`, `c:km:${newIdKey}:lgKey`, params.lgKey],
-                                        [`SET`, `c:km:${newIdKey}:tyKey`, params.tyKey],
-                                        [`SET`, `c:km:${newIdKey}:idKey`, newIdKey],
-                                        [`HSET`, `c:km:search:psKey:idKey`, params.psKey, newIdKey]
+                                        [`set`, `c:km:${newIdKey}:psKey`, params.psKey],
+                                        [`set`, `c:km:${newIdKey}:lgKey`, params.lgKey],
+                                        [`set`, `c:km:${newIdKey}:tyKey`, params.tyKey],
+                                        [`set`, `c:km:${newIdKey}:idKey`, newIdKey],
+                                        [`hset`, `c:km:search:psKey:idKey`, params.psKey, newIdKey]
                                     ]
                                     redis.multi(commandSet).exec((err, result) => {
                                         if (err) {
@@ -263,9 +269,9 @@ router.post("/keys", (req, res) => {
                 } else {
                     if (_Exists(idKey)) {
                         redis.pipeline([
-                            ['SET', `c:km:${idKey}:lgKey`, params.lgKey],
-                            ['SET', `c:km:${idKey}:ptKey`, params.ptKey],
-                            ['SET', `c:km:${idKey}:tyKey`, params.tyKey],
+                            ['set', `c:km:${idKey}:lgKey`, params.lgKey],
+                            ['set', `c:km:${idKey}:ptKey`, params.ptKey],
+                            ['set', `c:km:${idKey}:tyKey`, params.tyKey],
                         ]).exec((err, result) => {
                             if (err) {
                                 return console.log(err);
@@ -294,7 +300,7 @@ router.post("/keys", (req, res) => {
                         let commandSet = [];
                         idDoms[1].map((array, index) => {
                             commandSet.push([
-                                `MGET`, 
+                                `mget`, 
                                 `c:dm:${index}:psKey`, 
                                 `c:dm:${index}:lgKey`,
                                 `c:dm:${index}:ptKey`,
@@ -337,13 +343,13 @@ router.post("/keys", (req, res) => {
                         redis.multi(['BITPOS', `c:km:used:mon`, 0]).exec(err, result => {
                             if(result === -1) {
                                 redis.pipeline([
-                                    ['DEL', `c:km:${idKey}:psKey`],
-                                    ['DEL', `c:km:${idKey}:lgKey`],
-                                    ['DEL', `c:km:${idKey}:ptKey`],
-                                    ['DEL', `c:km:${idKey}:tyKey`],
-                                    ['DEL', `c:km:${idKey}:idKey`],
-                                    [`HDEL`, `c:dm:search:psKey:idKey`, params.psKey],
-                                    ['DEL', `c:km:used:mon`],
+                                    ['del', `c:km:${idKey}:psKey`],
+                                    ['del', `c:km:${idKey}:lgKey`],
+                                    ['del', `c:km:${idKey}:ptKey`],
+                                    ['del', `c:km:${idKey}:tyKey`],
+                                    ['del', `c:km:${idKey}:idKey`],
+                                    [`hdel`, `c:dm:search:psKey:idKey`, params.psKey],
+                                    ['del', `c:km:used:mon`],
 
                                 ]).exec((err, result) => {
                                     res.send(responseCode.SUCCESS);
@@ -392,16 +398,16 @@ router.post("/MonitorList", (req, res) => {
                 } else {
                     if (_Exists(idKey)) {
                        redis.multi([
-                           [`SISMEMBER`, `c:ml:search:idKey`, idKey]
+                           [`sismember`, `c:ml:search:idKey`, idKey]
                        ]).exec((err, result) => {
                            if (err) {
                                return console.log(err)
                            } else {
                                if (0 === result[0]) {
                                    redis.pipeline([
-                                       [`SADD`, `c:ml:search:idKey`, idKey],
-                                       [`RPUSH`, `c:ml:list`, params],
-                                       [`SETBIT`, `c:km:used:mon`, idKey, 1]
+                                       [`sadd`, `c:ml:search:idKey`, idKey],
+                                       [`rpush`, `c:ml:list`, params],
+                                       [`setbit`, `c:km:used:mon`, idKey, 1]
                                    ]).exec((err, result) => {
                                        if (err) {
                                            return console.log(err)
@@ -430,22 +436,102 @@ router.post("/MonitorList", (req, res) => {
         case 'PUT':
             /*  URI     /MonitorList
                 param   queryType: PUT
-                        curIdx: Current Index
+                        curIdx: Current Index (front 0 L, back -1 R, mid n)
                         updateIdx: Update Index
             */
-            //앞일경우 0 L, 뒤일경우 -1 R, 중간일 경우 LINSERT
-        
+            if (params.updateIdx === 0) {
+                redis.multi([
+                    ['lrange', 'c:ml:list', curIdx, 0]
+                ]).exec((err, value) => {
+                    if (err) { return console.log(err); } else {
+                        redis.multi([
+                            ['LTRIM', 'c:ml:list', curIdx, -1],
+                            ['RPUSH', 'c:ml:list', value]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else { 
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }); 
+            } else if(params.updateIdx === -1) {
+                redis.multi([
+                    ['lrange', 'c:ml:list', curIdx, 0]
+                ]).exec((err, value) => {
+                    if (err) { return console.log(err); } else {
+                        redis.multi([
+                            ['ltrim', 'c:ml:list', curIdx, -1],
+                            ['lpush', 'c:ml:list', value]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }); 
+            } else {
+                redis.multi([
+                    ['lrange', 'c:ml:list', curIdx, 0]
+                    ['lrange', 'c:ml:list', updateIdx, 0]
+                ]).exec((err, values) => {
+                    if (err) { return console.log(err); } else {
+                        redis.multi([
+                            ['ltrim', 'c:ml:list', curIdx, -1],
+                            ['linsert', 'c:ml:list', 'BEFORE', value[0][1], value[0][0]]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }); 
+            }
+            break;
+
         case 'GET':
             /*  URI     /MonitorList
                 param   queryType: GET
             */
+            redis.multi([
+                ['lrange', 'c:ml:list', 0, -1]
+            ]).exec((err, list) => {
+                response.resCode = resCode.SUCCESS;
+                response.payload = list;
+                res.send(response);
+            });
             break;
 
         case 'DELETE':
             /*  URI     /MonitorList
                 param   queryType: PUT
                         curIdx: Current Index
+                        psKey: psKey
             */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idKey)) {
+                        redis.multi([
+                            ['ltrim', 'c:ml:list', curIdx, -1],
+                            [`setbit`, `c:km:used:mon`, idKey, 0],
+                            [`srem`, `c:ml:search:idKey`, idKey]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }
+            });            
             break;
     }
 });
