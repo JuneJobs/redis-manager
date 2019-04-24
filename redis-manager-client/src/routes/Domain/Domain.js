@@ -60,16 +60,16 @@ class Domain extends Component {
         super(props);
         this.state = {
             columnDefs: [{
+                headerName: "Physical Domain",
+                field: "psDom",
+                editable: false
+                } ,{
                 headerName: "Logical Domain",
-                field: "key",
+                field: "lgDom",
                 align: "right",
                 width: 200,
                 //headerCheckboxSelection: true,
                 //checkboxSelection: true,
-                editable: false
-            }, {
-                headerName: "Physical Domain",
-                field: "value",
                 editable: false
             }],
             defaultColDef: {
@@ -80,8 +80,8 @@ class Domain extends Component {
             rowSelection: "single",
             rowData: [],
             selectedData: {
-                key: '',
-                value: ''
+                lgDom: '',
+                psDom: ''
             },
             readonly: true,
             mode: 'R'
@@ -101,9 +101,10 @@ class Domain extends Component {
         };
         try {
             const response = await axios.post("/domain", params);
-            response.data.sort(function (a, b) {
-                let keyA = a.key.toUpperCase(); // ignore upper and lowercase
-                let keyB = b.key.toUpperCase(); // ignore upper and lowercase
+                let data = response.data.payload
+                data.sort(function (a, b) {
+                let keyA = a.psDom.toUpperCase(); // ignore upper and lowercase
+                let keyB = b.psDom.toUpperCase(); // ignore upper and lowercase
                 if (keyA < keyB) {
                     return -1;
                 }
@@ -113,7 +114,7 @@ class Domain extends Component {
                 return 0;
             });
             this.setState({
-                rowData: response.data
+                rowData: data
             });
             this.selectFirstNode();
         } catch (e) {
@@ -136,8 +137,7 @@ class Domain extends Component {
     }
     selectFirstNode() {
         this.gridApi.forEachNode(function (node) {
-            console.log(node);
-            if (node.data.key === "s") {
+            if (node.rowIndex === 0) {
                 node.setSelected(true);
             }
         });
@@ -148,26 +148,26 @@ class Domain extends Component {
         if(this.state.mode === 'R') {
             this.setState({
                 selectedData: {
-                    key: selectedRows.key,
-                    value: e.target.value
+                    psDom: selectedRows.psDom,
+                    lgDom: e.target.value
                 }
             });
         } else {
             this.setState({
                 selectedData: {
-                    key: this.input.value,
-                    value: e.target.value
+                    psDom: this.psDom.value,
+                    lgDom: e.target.value
                 }
             });
         }
         
     }
-    onPyTextChange(e) {
+    onPsDomTextChange(e) {
         console.log(e.target.value);
         this.setState({
             selectedData: {
-                key: e.target.value,
-                value: ''
+                psDom: e.target.value,
+                lgDom: this.lgDom.value
             }
         });
     }
@@ -187,18 +187,27 @@ class Domain extends Component {
     }
 
     onSaveClick(){
-        var params = {
-            "queryType": "PUT",
-            "py": this.state.selectedData.key,
-            "lg": this.state.selectedData.value,
-        };
+        if(!this.state.readonly) {
+            var params = {
+                "queryType": "POST",
+                "psDom": this.state.selectedData.psDom,
+                "lgDom": this.state.selectedData.lgDom,
+            };
+        } else {
+            var params = {
+                "queryType": "PUT",
+                "psDom": this.state.selectedData.psDom,
+                "lgDom": this.state.selectedData.lgDom,
+            };
+        }
+        
         this.setData(params);
     }
     onAddClick() {
         this.setState({
             selectedData: {
-                key: '',
-                value: ''
+                psDom: '',
+                lgDom: ''
             },
             readonly: false,
             mode:'W'
@@ -218,7 +227,7 @@ class Domain extends Component {
     onDeleteClick() {
         var params = {
             "queryType": "DELETE",
-            "key": this.state.selectedData.key
+            "psDom": this.state.selectedData.psDom
         };
         this.delData(params);
     }
@@ -238,20 +247,21 @@ class Domain extends Component {
                     inputProps={{
                         readOnly: this.state.readonly
                     }}
-                    id="dm-lg"
-                    label="Logical Domain"
-                    inputRef={el => this.input = el}
+                    id="dm-psDom"
+                    label="Pysical Domain"
+                    inputRef={el => this.psDom = el}
                     className={classes.textField}
                     margin="normal"
-                    value={this.state.selectedData.key}
-                    onChange={this.onPyTextChange.bind(this)}
+                    value={this.state.selectedData.psDom}
+                    onChange={this.onPsDomTextChange.bind(this)}
                 />
                 <TextField
-                    id="dm-py"
-                    label="Physical Domain"
+                    id="dm-lgdom"
+                    label="Logical Domain"
+                    inputRef={el => this.lgDom = el}
                     className={classes.textField}
                     margin="normal"
-                    value={this.state.selectedData.value}
+                    value={this.state.selectedData.lgDom}
                     onChange={this.onTextChange.bind(this)}
                 />
                 <Button 

@@ -290,19 +290,19 @@ class KeyManagement extends React.Component {
             "queryType": "GET"
         };
         try {
-            const res = await axios.post("domain", params);
+            const res = await axios.post("/domain", params);
             console.log(res);
             let domains = [];
 
-            res.data.map((object) => {
+            res.data.payload.map((object) => {
                 domains.push({
-                    label: object.value,
-                    value: object.key
+                    lgDom: object.lgDom,
+                    psDom: object.psDom
                 });
             });
             domains.sort(function (a, b) {
-                let keyA = a.label.toUpperCase(); // ignore upper and lowercase
-                let keyB = b.label.toUpperCase(); // ignore upper and lowercase
+                let keyA = a.psDom.toUpperCase(); // ignore upper and lowercase
+                let keyB = b.psDom.toUpperCase(); // ignore upper and lowercase
                 if (keyA < keyB) {
                     return -1;
                 }
@@ -314,8 +314,8 @@ class KeyManagement extends React.Component {
 
             this.setState({
                 domains: domains.map(domain => ({
-                label: domain.label,
-                value: domain.value,
+                label: domain.lgDom,
+                value: domain.psDom,
             })) 
             });
 
@@ -424,9 +424,9 @@ class KeyManagement extends React.Component {
         try {
             const response = await axios.post("/keys", params);
             this.setState({
-                rowData: response.data
+                rowData: response.data.payload
             });
-            if (response.data.length > 0) {
+            if (response.data.payload > 0) {
                 this.selectFirstNode();
             }
             
@@ -501,14 +501,14 @@ class KeyManagement extends React.Component {
         }
     }
     _onBtnDeleteClick = async () => {
-        console.log(this.state.selectedData.idx);
+        console.log(this.state.selectedData.psKey);
         var params = {
             "queryType": "DELETE",
-            "idx": this.state.selectedData.idx
+            "psKey": this.state.selectedData.psKey
         };
         try {
             await axios.post("/keys", params).then( res => {
-                if(res.data === 0) {
+                if(res.data.resCode === 0) {
                     this.getData();
                     this.selectFirstNode();
                 } else if (res.data === 3) {

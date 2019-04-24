@@ -192,6 +192,7 @@ router.post("/domain", (req, res) => {
                     }
                 }
             });
+        break;
     }
 });
 
@@ -220,19 +221,21 @@ router.post("/keys", (req, res) => {
                     if(_notExists(idKey)) {
                         _getIndexForKey('km', (newIdKey) => {
                             let domains = params.psKey.split(':'),
-                                command = [`c:dm:search:psDom:idDom`, domains];
+                                command = [`c:dm:search:psDom:idDom`];
+                            command = command.concat(domains)
                             redis.hmget(command, (err, idDoms) => {
                                 if (err) {
                                     return console.log(err);
                                 } else {
                                     let commandSet = [];
-                                    idDoms[0].map((idDom) => {
+                                    idDoms.map((idDom) => {
                                         commandSet.push([`sadd`, `c:dm:${idDom}:used`, newIdKey]);
                                     });
                                     commandSet = [...commandSet, 
                                         [`set`, `c:km:${newIdKey}:psKey`, params.psKey],
                                         [`set`, `c:km:${newIdKey}:lgKey`, params.lgKey],
                                         [`set`, `c:km:${newIdKey}:tyKey`, params.tyKey],
+                                        [`set`, `c:km:${newIdKey}:ptKey`, params.ptKey],
                                         [`set`, `c:km:${newIdKey}:idKey`, newIdKey],
                                         [`hset`, `c:km:search:psKey:idKey`, params.psKey, newIdKey]
                                     ]
@@ -255,6 +258,7 @@ router.post("/keys", (req, res) => {
                     }
                 }
             });
+            break;
 
         case 'PUT':
             /* URI     /key
@@ -276,7 +280,9 @@ router.post("/keys", (req, res) => {
                             if (err) {
                                 return console.log(err);
                             } else { 
-                                res.send(responseCode.SUCCESS);
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
                             }
                             
                         });
@@ -287,7 +293,7 @@ router.post("/keys", (req, res) => {
                     }
                 }
             });
-        
+            break;
 
         case 'GET':
             /*  URI     /key
@@ -296,26 +302,27 @@ router.post("/keys", (req, res) => {
             redis.scan(0, "match", "c:km:*:idKey", "count", "1000", (err, idDoms) => {
                 if (err) { return console.log(err); } else {
                     if (idDoms[1].length !== 0) {
-                        //cmdSet
+                        idDoms[1].splice(idDoms[1].indexOf("c:km:search:psKey:idKey"), 1)
                         let commandSet = [];
                         idDoms[1].map((array, index) => {
+                            let idDom = parseInt(array.split(":")[2]);
                             commandSet.push([
                                 `mget`, 
-                                `c:dm:${index}:psKey`, 
-                                `c:dm:${index}:lgKey`,
-                                `c:dm:${index}:ptKey`,
-                                `c:dm:${index}:tyKey`
+                                `c:km:${idDom}:psKey`,
+                                `c:km:${idDom}:lgKey`,
+                                `c:km:${idDom}:ptKey`,
+                                `c:km:${idDom}:tyKey`
                             ]);
                         });
                         //execute domain list searching
                         redis.multi(commandSet).exec((err, replies) => {
-                            let resJson = [];
+                            let resJson = []
                             replies.map((array, index) => {
                                 resJson.push({
-                                    'psKey': array[0],
-                                    'lgKey': array[1],
-                                    'ptKey': array[2],
-                                    'tyKey': array[3]
+                                    'psKey': array[1][0],
+                                    'lgKey': array[1][1],
+                                    'ptKey': array[1][2],
+                                    'tyKey': array[1][3]
                                 });
                             });
                             response.resCode = resCode.SUCCESS;
@@ -329,6 +336,7 @@ router.post("/keys", (req, res) => {
                     }
                 }
             });
+            break;
         case 'DELETE':
             /*  URI     /key
                 param   queryType: DELETE
@@ -340,26 +348,31 @@ router.post("/keys", (req, res) => {
                 } else {
                     if (_Exists(idKey)) {
                     //모니터 셋에 사용되는 키가 존재하는지 확인
-                        redis.multi(['BITPOS', `c:km:used:mon`, 0]).exec(err, result => {
-                            if(result === -1) {
-                                redis.pipeline([
-                                    ['del', `c:km:${idKey}:psKey`],
-                                    ['del', `c:km:${idKey}:lgKey`],
-                                    ['del', `c:km:${idKey}:ptKey`],
-                                    ['del', `c:km:${idKey}:tyKey`],
-                                    ['del', `c:km:${idKey}:idKey`],
-                                    [`hdel`, `c:dm:search:psKey:idKey`, params.psKey],
-                                    ['del', `c:km:used:mon`],
-
-                                ]).exec((err, result) => {
-                                    res.send(responseCode.SUCCESS);
+                        redis.pipeline([
+                            ['bitpos', `c:km:used:mon`, 1]
+                        ]).exec((err, result) => {
+                            if (err) {
+                                return console.log(err)
+                            } else { 
+                                if (result[0][1] === -1) {
+                                    redis.pipeline([
+                                        ['del', `c:km:${idKey}:psKey`],
+                                        ['del', `c:km:${idKey}:lgKey`],
+                                        ['del', `c:km:${idKey}:ptKey`],
+                                        ['del', `c:km:${idKey}:tyKey`],
+                                        ['del', `c:km:${idKey}:idKey`],
+                                        [`hdel`, `c:dm:search:psKey:idKey`, params.psKey],
+                                        ['del', `c:km:used:mon`]
+                                    ]).exec((err, result) => {
+                                        response.resCode = resCode.SUCCESS;
+                                        response.payload = [];
+                                        res.send(response);
+                                    });
+                                } else {
+                                    response.resCode = resCode.USING;
                                     response.payload = [];
                                     res.send(response);
-                                });
-                            } else {
-                                response.resCode = resCode.USING;
-                                response.payload = [];
-                                res.send(response);
+                                }
                             }
                         });
                     } else {
@@ -369,6 +382,7 @@ router.post("/keys", (req, res) => {
                     }
                 }
             });
+            break;
     }
 });
 
