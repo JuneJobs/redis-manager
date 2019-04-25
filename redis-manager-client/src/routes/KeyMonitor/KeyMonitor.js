@@ -31,6 +31,11 @@ import InputLabel from "@material-ui/core/InputLabel";
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from "@material-ui/core/Switch";
 import CachedIcon from '@material-ui/icons/Cached';
+
+import Select from 'react-select';
+import Snackbar from '@material-ui/core/Snackbar';
+import { stat } from 'fs';
+
 const styles = theme => ({
     container: {
         display: 'flex',
@@ -81,6 +86,9 @@ const styles = theme => ({
     title: {
         fontSize: 14,
     },
+    singleValue: {
+        fontSize: 14,
+    },
     addMonitor: {
         textAlign: 'right',
         width: '100%'
@@ -92,17 +100,25 @@ const styles = theme => ({
     formControl: {
         //margin: theme.spacing.unit,
         minWidth: 500,
+    },
+    input: {
+        display: 'flex',
+        padding: 0,
     }
 });
+
+// const suggestions 
+
 class KeyString extends Component {
     render() {
         const { classes } = this.props;
         return (
           <div>
             <TextField
-              ref="txtKeyName"
-              id="txtKeyName"
-              label="Key"
+              ref="txtPsKey"
+              id="txtPsKey"
+              label="txtPsKey"
+              inputRef={el => this.psKey = el}
               //placeholder="Put the keys pattern"
               fullWidth
               margin="normal"
@@ -117,27 +133,40 @@ class KeyString extends Component {
     }
 };
 
-class SearchSec extends Component {
-    render() {
-        const { classes } = this.props;
-        return (
-          <div>
-            <TextField
-              ref="txtKeyName"
-              id="txtKeyName"
-              label="Search Seconds"
-              //placeholder="Put the keys pattern"
-              fullWidth
-              margin="normal"
-              // value={this.state.selectedData.ptKey}
-              //onChange={this.handleTextChange("ptKey")}
-              InputLabelProps={{
-                shrink: true
-              }}
-            />
-          </div>
-        );
-    }
+
+function inputComponent({ inputRef, ...props }) {
+  return <div ref={inputRef} {...props} />;
+}
+
+function Control(props) {
+  return (
+    <TextField
+      fullWidth
+      InputProps={{
+        inputComponent,
+        inputProps: {
+          className: props.selectProps.classes.input,
+          inputRef: props.innerRef,
+          children: props.children,
+          ...props.innerProps,
+        },
+      }}
+      {...props.selectProps.textFieldProps}
+    />
+  );
+}
+
+function SingleValue(props) {
+  return (
+    <Typography className={props.selectProps.classes.singleValue} {...props.innerProps}>
+      {props.children}
+    </Typography>
+  );
+}
+
+const components = {
+    Control,
+    SingleValue
 };
 
 class Domain extends Component {
@@ -265,6 +294,17 @@ class Domain extends Component {
                 filter: "agTextColumnFilter"
             },
             rowSelection: "single",
+            monType: 'single',
+            newKey: null,
+            keys: null,
+            monTitle: null,
+            sec: 20,
+            snackBar: {
+                open: false,
+                vertical: 'top',
+                horizontal: 'center',
+                msg: ''
+            }
         }
         //첫번째 포맷에 들어가야 하는 것
         //키 선택, 키 조회
@@ -287,23 +327,43 @@ class Domain extends Component {
             open: true
         });
     };
-    handleAddButton = () => {
-        console.log(this.state);
+    handleAddButton = async () => {
+        if (this.state.monTitle === null) {
+            this.setState({
+                'snackBar': {
+                    open: true,
+                    vertical: 'top',
+                    horizontal: 'center',
+                    msg: 'Please enter monitor title.'
+                }
+            });
+            return;
+        }
+        if (this.state.newKey === null) {
+            this.setState({
+                'snackBar': {
+                    open: true,
+                    vertical: 'top',
+                    horizontal: 'center',
+                    msg: 'Please select a key.'
+                }
+            });
+            return;
+        }
+        let params = {};
+        params = {
+            "queryType": "POST",
+            "monTitle": this.state.monTitle,
+            "psKey": this.state.newKey.value,
+            "tyKey": this.state.newKey.tyKey,
+            "sec": this.state.sec,
+            "auto": false
+        }
+        await axios.post("/MonitorList", params);
+
         this.setState({
-            numChildren: this.state.numChildren + 1,
-            open:false,
-            cardDataSet: [...this.state.cardDataSet, {
-                id: 3,
-                title: 'user birth monitor',
-                sec: 5,
-                auto: true,
-                type: 'single',
-                searchString: 'user:birth',
-                dataType: 'string',
-                rowData: []
-            }]
+            open:false
         });
-        console.log(this.state);
     };
 
     handleCloseButton = () => {
@@ -314,6 +374,39 @@ class Domain extends Component {
     // getData = (idx) => {
         
     // }
+
+    handleMonTypeSelectChange = name => event => {
+        this.setState({
+            [name]: event.target.value
+        });
+    };
+
+    handlePsKeyChange = name => value => {
+        this.setState({
+            [name]: value
+        });
+    };
+
+    handletxtMonTitleChange = name => value => {
+        this.setState({
+            [name]: value.nativeEvent.target.defaultValue + value.nativeEvent.data
+        });
+    };
+    handletxtSearchSecChange = name => event => {
+        this.setState({
+            [name]: event.target.value
+        });
+    };
+    handleSnackBarClose = () => {
+        this.setState({
+            'snackBar': {
+                open: false,
+                vertical: 'top',
+                horizontal: 'center',
+                msg: ''
+            }
+        });
+    };
 
     onGridReady = (params) => {
         this.gridApi = params.api;
@@ -340,6 +433,43 @@ class Domain extends Component {
         }]);
     }
 
+    setKeyList = async () => {
+        let params = {
+            "queryType": "GET"
+        };
+        try {
+            const res = await axios.post("/keys", params);
+            console.log(res);
+            let keys = [];
+
+            res.data.payload.map((object) => {
+                keys.push({
+                    value: object.psKey,
+                    label: object.psKey + " (" + object.lgKey + ")",
+                    tyKey: object.tyKey
+                });
+            });
+            keys.sort(function (a, b) {
+                let keyA = a.value.toUpperCase(); // ignore upper and lowercase
+                let keyB = b.value.toUpperCase(); // ignore upper and lowercase
+                if (keyA < keyB) {
+                    return -1;
+                }
+                if (keyA > keyB) {
+                    return 1;
+                }
+                return 0;
+            });
+            console.log(keys);
+            this.setState({
+                'keys': keys
+            })
+        } catch (e) {
+            console.log(e);
+        }
+
+    }
+
     componentDidMount() {
         this.state.cardDataSet.map((item, idx)=> {
             if (idx === 0){
@@ -351,6 +481,8 @@ class Domain extends Component {
                 })
             }
         });
+
+        this.setKeyList();
     }
 
     ChildComponent = props => {
@@ -443,7 +575,8 @@ class Domain extends Component {
 
     render() {
 
-        const { classes } = this.props;
+        const { classes, theme } = this.props;
+        const { vertical, horizontal, open } = this.state.snackBar;
         // const bull = <span className={classes.bullet}>•</span>;
         const children = [];        
         for (var i = 0; i < this.state.numChildren; i += 1) {
@@ -456,6 +589,17 @@ class Domain extends Component {
                     }
               />
             );
+        };
+
+        
+
+        const selectStyles = {
+            input: base => ({
+                ...base,
+                "& input": {
+                    font: "inherit"
+                }
+            })
         };
 
         return (
@@ -497,39 +641,70 @@ class Domain extends Component {
                         Please pick one of the key type.
                     </DialogContentText>
                     <TextField
-                        ref="txtTitle"
-                        id="txtTitle"
+                        ref="txtMonTitle"
+                        id="txtMonTitle"
                         label="Monitor Title"
                         //placeholder="Put the keys pattern"
                         fullWidth
                         margin="normal"
-                        // value={this.state.selectedData.ptKey}
-                        //onChange={this.handleTextChange("ptKey")}
+                        value={this.state.monTitle}
+                        onChange={this.handletxtMonTitleChange('monTitle')}
                         InputLabelProps={{
                             shrink: true
                         }}
                     />
                     <FormControl className={classes.formControl}>
                         <InputLabel shrink htmlFor="key-type-label-placeholder">
-                            Key Type
+                            Monitor Type
                         </InputLabel>
                         <NativeSelect
-                            value={"1"}
-                            //onChange={this.handleNativeSelectChange.bind(this)}
+                            value={this.state.monType}
+                            onChange={this.handleMonTypeSelectChange('monType')}
                             input={
                             <Input
-                                name="keyType"
+                                name="monType"
                                 id="key-type-label-placeholder"
                             />
                             }
-                            name="keyType"
+                            name="monType"
                         >
-                            <MenuItem value={"1"}>Single</MenuItem>
-                            <MenuItem value={"2"}>Multiple</MenuItem>
+                            <MenuItem value={"single"}>Single</MenuItem>
+                            <MenuItem value={"multi"}>Multiple</MenuItem>
                         </NativeSelect>
                     </FormControl>
-                    <KeyString/>
-                    <SearchSec/>
+                    {/* <KeyString/> */}
+                    <Select
+                        classes={classes}
+                        styles={selectStyles}
+                        textFieldProps={{
+                        label: 'Select Key',
+                        InputLabelProps: {
+                            shrink: true,
+                        },
+                        }}
+                        options={this.state.keys}
+                        components={components}
+                        value={this.state.newKey}
+                        onChange={this.handlePsKeyChange('newKey')}
+                        placeholder="Search "
+                        isClearable
+                    />
+                     < TextField
+                        ref = "txtSearchSec"
+                        id = "txtSearchSec"
+                        label = "Search Seconds"
+                        //onChange={this.handletxtMonTitleChange('monTitle')}
+                        //placeholder="Put the keys pattern"
+                        fullWidth
+                        margin = "normal"
+                        value={this.state.sec}
+                        onChange={this.handletxtSearchSecChange('sec')}
+                        InputLabelProps = {
+                            {
+                                shrink: true
+                            }
+                        }
+                     />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={this.handleAddButton.bind(this)} color="primary">
@@ -540,6 +715,15 @@ class Domain extends Component {
                     </Button>
                 </DialogActions>
                 </Dialog>
+                <Snackbar
+                    anchorOrigin={{ vertical, horizontal }}
+                    open={open}
+                    onClose={this.handleSnackBarClose}
+                    ContentProps={{
+                        'aria-describedby': 'message-id',
+                    }}
+                    message={<span id="message-id">{this.state.snackBar.msg}</span>}
+                />
             </div>
         );
     }

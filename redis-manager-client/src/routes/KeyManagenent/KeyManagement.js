@@ -510,6 +510,11 @@ class KeyManagement extends React.Component {
             await axios.post("/keys", params).then( res => {
                 if(res.data.resCode === 0) {
                     this.getData();
+                    this.setState({
+                        readonly: true,
+                        mode: 'R'
+                    });
+                    updateRow = false;
                     this.selectFirstNode();
                 } else if (res.data === 3) {
                     this.setState({
@@ -641,29 +646,29 @@ class KeyManagement extends React.Component {
                         }}
                     />
                     <FormControl className={classes.formControl}>
-                    <InputLabel shrink htmlFor="key-type-label-placeholder">
-                        Key Type
-                    </InputLabel>
-                    <NativeSelect
-                        value={this.state.selectedData.tyKey}
-                        onChange={this.handleNativeSelectChange.bind(this)}
-                        input={
-                        <Input
+                        <InputLabel shrink htmlFor="key-type-label-placeholder">
+                            Key Type
+                        </InputLabel>
+                        <NativeSelect
+                            value={this.state.selectedData.tyKey}
+                            onChange={this.handleNativeSelectChange.bind(this)}
+                            input={
+                            <Input
+                                name="keyType"
+                                id="key-type-label-placeholder"
+                            />
+                            }
                             name="keyType"
-                            id="key-type-label-placeholder"
-                        />
-                        }
-                        name="keyType"
-                    >
-                        <MenuItem value={"Strings"}>Strings</MenuItem>
-                        <MenuItem value={"Lists"}>Lists</MenuItem>
-                        <MenuItem value={"Sets"}>Sets</MenuItem>
-                        <MenuItem value={"Hashes"}>Hashes</MenuItem>
-                        <MenuItem value={"SortedSets"}>SortedSets</MenuItem>
-                        <MenuItem value={"Bitmaps"}>Bitmaps</MenuItem>
-                        <MenuItem value={"HyperLogLogs"}>HyperLogLogs</MenuItem>
-                        <MenuItem value={"GeoSets"}>GeoSets</MenuItem>
-                    </NativeSelect>
+                        >
+                            <MenuItem value={"Strings"}>Strings</MenuItem>
+                            <MenuItem value={"Lists"}>Lists</MenuItem>
+                            <MenuItem value={"Sets"}>Sets</MenuItem>
+                            <MenuItem value={"Hashes"}>Hashes</MenuItem>
+                            <MenuItem value={"SortedSets"}>SortedSets</MenuItem>
+                            <MenuItem value={"Bitmaps"}>Bitmaps</MenuItem>
+                            <MenuItem value={"HyperLogLogs"}>HyperLogLogs</MenuItem>
+                            <MenuItem value={"GeoSets"}>GeoSets</MenuItem>
+                        </NativeSelect>
                     </FormControl>
                     <Button
                         variant="contained"

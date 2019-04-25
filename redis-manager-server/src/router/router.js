@@ -6,11 +6,11 @@ const LlRequest = require("../lib/ISRequest");
 const Redis = require("ioredis");
 let redis = new Redis();
 let resCode = {
-    SUCCESS: '0',
-    ERROR: '1',
-    DUPLICATION: '2',
-    USING: '3',
-    NOT_EXIST: '4'
+    SUCCESS: 0,
+    ERROR: 1,
+    DUPLICATION: 2,
+    USING: 3,
+    NOT_EXIST: 4
 }
 let response = {
     resCode : '',
@@ -361,7 +361,7 @@ router.post("/keys", (req, res) => {
                                         ['del', `c:km:${idKey}:ptKey`],
                                         ['del', `c:km:${idKey}:tyKey`],
                                         ['del', `c:km:${idKey}:idKey`],
-                                        [`hdel`, `c:dm:search:psKey:idKey`, params.psKey],
+                                        [`hdel`, `c:km:search:psKey:idKey`, params.psKey],
                                         ['del', `c:km:used:mon`]
                                     ]).exec((err, result) => {
                                         response.resCode = resCode.SUCCESS;
@@ -400,8 +400,8 @@ router.post("/MonitorList", (req, res) => {
                 title: 'user key monitor',
                 sec: 5,
                 auto: true,
-                type: 'single',
-                searchString: 'user:seq',
+                monType: 'single',
+                psKey: 'user:seq',
                 dataType: 'string',
                 rowData: []
             }
@@ -417,10 +417,12 @@ router.post("/MonitorList", (req, res) => {
                            if (err) {
                                return console.log(err)
                            } else {
-                               if (0 === result[0]) {
+                               if (0 === result[0][1]) {
+                                   delete params.queryType;
+                                   let listData = JSON.stringify(params);
                                    redis.pipeline([
                                        [`sadd`, `c:ml:search:idKey`, idKey],
-                                       [`rpush`, `c:ml:list`, params],
+                                       [`rpush`, `c:ml:list`, listData],
                                        [`setbit`, `c:km:used:mon`, idKey, 1]
                                    ]).exec((err, result) => {
                                        if (err) {
