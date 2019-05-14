@@ -34,6 +34,9 @@ import CachedIcon from '@material-ui/icons/Cached';
 
 import Select from 'react-select';
 import Snackbar from '@material-ui/core/Snackbar';
+
+import IconButton from '@material-ui/core/IconButton';
+import DeleteIcon from '@material-ui/icons/Delete';
 import { stat } from 'fs';
 
 const styles = theme => ({
@@ -52,12 +55,12 @@ const styles = theme => ({
     txtStructure: {
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
-        width: 100
+        width: 120
     },
-    txtType: {
+    txtMonType: {
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
-        width: 100,
+        width: 120,
     },
     Switch: {
         marginRight: theme.spacing.unit,
@@ -90,6 +93,10 @@ const styles = theme => ({
         fontSize: 14,
     },
     addMonitor: {
+        textAlign: 'right',
+        width: '100%'
+    },
+    deleteButton: {
         textAlign: 'right',
         width: '100%'
     },
@@ -271,21 +278,21 @@ class Domain extends Component {
             numChildren: 0,
             cardDataSet: [{
                 id: 1,
-                title: 'user key monitor',
+                monTitle: 'user key monitor',
                 sec: 5,
                 auto: true,
                 type: 'single',
-                searchString: 'user:seq',
-                dataType: 'string',
+                psKey: 'user:seq',
+                tyKey: 'string',
                 rowData: []
             }, {
                 id:2,
-                title: 'user name monitor',
+                monTitle: 'user name monitor',
                 sec: 5,
                 auto: false,
                 type: 'single',
-                searchString: 'user:name',
-                dataType: 'hash',
+                psKey: 'user:name',
+                tyKey: 'hash',
                 rowData: []
             }],
             defaultColDef: {
@@ -356,6 +363,7 @@ class Domain extends Component {
             "monTitle": this.state.monTitle,
             "psKey": this.state.newKey.value,
             "tyKey": this.state.newKey.tyKey,
+            "monType": this.state.monType,
             "sec": this.state.sec,
             "auto": false
         }
@@ -364,12 +372,15 @@ class Domain extends Component {
         this.setState({
             open:false
         });
+
+        this._setMonitorCard();
     };
 
     handleCloseButton = () => {
         this.setState({
             open: false
         });
+
     };
     // getData = (idx) => {
         
@@ -388,8 +399,9 @@ class Domain extends Component {
     };
 
     handletxtMonTitleChange = name => value => {
+        let newTitleStr = value.target.value;
         this.setState({
-            [name]: value.nativeEvent.target.defaultValue + value.nativeEvent.data
+            [name]: newTitleStr
         });
     };
     handletxtSearchSecChange = name => event => {
@@ -408,6 +420,39 @@ class Domain extends Component {
         });
     };
 
+    handleDeleteButton = async (event) => {
+        console.log(event.currentTarget.value);
+
+        let idx = parseInt(event.currentTarget.value);
+        console.log(this.state.cardDataSet);
+        let cardData = this.state.cardDataSet[idx];
+        let params = {
+            "queryType": "DELETE",
+            "curIdx": idx,
+            "psKey": cardData.psKey
+        }
+        await axios.post("/MonitorList", params);
+        this._setMonitorCard();
+    }
+
+    handleAutoSearchChange = async (event) => {
+        
+        let value = JSON.parse(event.target.value);
+        if (value) {
+            value = false;
+        } else {
+            value = true;
+        }
+        let idx = parseInt(event.target.id);
+        let params = {
+            "queryType": "PUT2",
+            "curIdx": idx,
+            "auto": value
+        }
+        await axios.post("/MonitorList", params);
+        this._setMonitorCard();
+    }
+
     onGridReady = (params) => {
         this.gridApi = params.api;
         this.gridColumnApi = params.columnApi;
@@ -416,7 +461,7 @@ class Domain extends Component {
         //this.onSelectionChanged()
     };
 
-    bindData = (key, dataType, cb) => {
+    bindData = (key, tyKey, cb) => {
         // var params = {
         //     'key': key,
         //     'dataType': dataType
@@ -433,7 +478,7 @@ class Domain extends Component {
         }]);
     }
 
-    setKeyList = async () => {
+    _setKeyList = async () => {
         let params = {
             "queryType": "GET"
         };
@@ -470,19 +515,49 @@ class Domain extends Component {
 
     }
 
-    componentDidMount() {
-        this.state.cardDataSet.map((item, idx)=> {
-            if (idx === 0){
-                this.setState(state => {
-                    this.bindData(item.searchString, item.dataType, (data) => {
-                        item.rowData = data;
-                    });
-                    //return {rowData};
-                })
+    _setMonitorCard = async () => {
+        let params = {
+            "queryType": "GET"
+        };
+        try {
+            const res = await axios.post("/MonitorList", params);
+            //res.data.payload
+            console.log(res.data.payload);
+            let cardDataSet = [];
+            for (let i = 0; i < res.data.payload.length; i++) {
+                cardDataSet.push(JSON.parse(res.data.payload[i]));
             }
-        });
+            this.setState({
+                'cardDataSet': cardDataSet
+            })
 
-        this.setKeyList();
+            // const bull = <span className={classes.bullet}>•</span>;
+            const children = [];        
+            for (var i = 0; i < this.state.cardDataSet.length; i++) {
+                children.push(
+                <this.ChildComponent
+                        idx={i}
+                        cardDataSet = {
+                            this.state.cardDataSet
+                        }
+                />
+                );
+            };
+            this.setState({
+                'children': children
+            })
+
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    componentDidMount = () => {  
+
+        this._setKeyList();
+
+        this._setMonitorCard();
+        
     }
 
     ChildComponent = props => {
@@ -492,18 +567,21 @@ class Domain extends Component {
         return (
             <Card className={classes.newCard}>
                 <Typography variant="h6" color="inherit" className={classes._h6Spacing} noWrap>
-                    {cardDataSet[idx].title}
+                    {cardDataSet[idx].monTitle}
                 </Typography>
-                <div className={classes.addMonitor}>
-                    <Button color="secondary" className={classes.button}>
-                        X
-                    </Button>
+                <div className={classes.deleteButton}>
+                    <IconButton aria-label="Delete" 
+                        className={classes.margin}
+                        value={idx}
+                        onClick={this.handleDeleteButton}>
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
                 </div>
                 <TextField
                     id="standard-name"
                     label="Search Key"
                     className={classes.textField}
-                    value={cardDataSet[idx].searchString}
+                    value={cardDataSet[idx].psKey}
                     //onChange={this.handleChange('name')}
                     margin="normal"
                 />
@@ -511,20 +589,20 @@ class Domain extends Component {
                     id="standard-name2"
                     label="Data Structure"
                     className={classes.txtStructure}
-                    value={cardDataSet[idx].dataType}
+                    value={cardDataSet[idx].tyKey}
                     //onChange={this.handleChange('name')}
                     margin="normal"
                 />
                 <TextField
-                    id="standard-name2"
-                    label="Type"
-                    className={classes.txtType}
-                    value={cardDataSet[idx].type}
+                    id="standard-name3"
+                    label="Monitor Type"
+                    className={classes.txtMonType}
+                    value={cardDataSet[idx].monType}
                     //onChange={this.handleChange('name')}
                     margin="normal"
                 />
                 <TextField
-                    id="standard-name2"
+                    id="standard-name4"
                     label="Auto search seconds"
                     className={classes.textField}
                     value={cardDataSet[idx].sec}
@@ -536,7 +614,8 @@ class Domain extends Component {
                     control={
                         <Switch
                             checked={cardDataSet[idx].auto}
-                            //onChange={this.handleChange('checkedA')}
+                            onChange={this.handleAutoSearchChange}
+                            id={idx}
                             value={cardDataSet[idx].auto}
                         />
                     }
@@ -577,21 +656,6 @@ class Domain extends Component {
 
         const { classes, theme } = this.props;
         const { vertical, horizontal, open } = this.state.snackBar;
-        // const bull = <span className={classes.bullet}>•</span>;
-        const children = [];        
-        for (var i = 0; i < this.state.numChildren; i += 1) {
-            children.push(
-              <this.ChildComponent
-                    key={i}
-                    idx={i}
-                    cardDataSet = {
-                        this.state.cardDataSet
-                    }
-              />
-            );
-        };
-
-        
 
         const selectStyles = {
             input: base => ({
@@ -629,7 +693,7 @@ class Domain extends Component {
                         </CardContent>
                     </Toolbar>
                 </Card>
-                {children}
+                {this.state.children}
                 <Dialog
                     open={this.state.open}
                     onClose={this.handleClose}

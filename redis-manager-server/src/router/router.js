@@ -510,6 +510,41 @@ router.post("/MonitorList", (req, res) => {
             }
             break;
 
+        case 'PUT2': 
+             /*  URI     /MonitorList
+                param   queryType: PUT
+                        curIdx: Current Index
+                        auto: auto searching
+
+
+            */
+            redis.multi([
+                ['lrange', 'c:ml:list', params.curIdx, params.curIdx]
+            ]).exec((err, item) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+
+                    //make a updateItem
+                    let curItem = JSON.parse(item[0][1]);
+                    curItem.auto = params.auto;
+                    let updateItem = JSON.stringify(curItem);
+
+                    redis.multi([
+                        ['lset', 'c:ml:list', params.curIdx, updateItem]
+                    ]).exec((err, result) => {
+                        if (err) {
+                            return console.log(err);
+                        } else {
+                            response.resCode = resCode.SUCCESS;
+                            response.payload = [];
+                            res.send(response);
+                        }
+                    })
+                }
+            })
+            break;
+
         case 'GET':
             /*  URI     /MonitorList
                 param   queryType: GET
@@ -518,7 +553,7 @@ router.post("/MonitorList", (req, res) => {
                 ['lrange', 'c:ml:list', 0, -1]
             ]).exec((err, list) => {
                 response.resCode = resCode.SUCCESS;
-                response.payload = list;
+                response.payload = list[0][1];
                 res.send(response);
             });
             break;
@@ -535,7 +570,7 @@ router.post("/MonitorList", (req, res) => {
                 } else {
                     if (_Exists(idKey)) {
                         redis.multi([
-                            ['ltrim', 'c:ml:list', curIdx, -1],
+                            ['ltrim', 'c:ml:list', params.curIdx + 1, -1],
                             [`setbit`, `c:km:used:mon`, idKey, 0],
                             [`srem`, `c:ml:search:idKey`, idKey]
                         ]).exec((err, result) => {
