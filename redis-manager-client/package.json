@@ -9,6 +9,7 @@
     "ag-grid-react": "^20.1.0",
     "axios": "^0.18.0",
     "react": "^16.8.3",
+    "react-addons-update": "^15.6.2",
     "react-dom": "^16.8.3",
     "react-scripts": "2.1.5",
     "react-select": "^2.4.1",

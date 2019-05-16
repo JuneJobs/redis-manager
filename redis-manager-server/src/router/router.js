@@ -586,3 +586,40 @@ router.post("/MonitorList", (req, res) => {
             break;
     }
 });
+
+router.post("/searchKey", (req, res) => {
+    /*  URI     /searchKey
+        Param queryType: GET
+                psKey: Physical Key
+                tyKey: Type of Key
+    */
+    let params = req.body;
+
+    if (params.queryType !== 'GET') return; 
+    
+    switch (params.tyKey) {
+        case 'Strings':
+            
+            break;
+
+        case 'Lists':
+
+            break;
+        
+        case 'Sets':
+
+            break;
+
+        case 'SortedSets':
+
+            break;
+         
+        case 'GeoSets':
+
+            break;   
+
+        case 'Hashes':
+
+            break;   
+    }
+});
