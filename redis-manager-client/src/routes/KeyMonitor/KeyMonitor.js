@@ -188,7 +188,7 @@ class Domain extends Component {
                 editable: false,
                 valueGetter: "node.id"
             },{
-                headerName: "value",
+                headerName: "Value",
                 field: "value",
                 editable: false,
                 width: 200
@@ -199,9 +199,14 @@ class Domain extends Component {
                 width: 60,
                 editable: false,
                 valueGetter: "node.id"
-            },{
-                headerName: "values",
-                field: "values",
+            }, {
+                headerName: "Index",
+                field: "idx",
+                editable: false,
+                width: 200
+            }, {
+                headerName: "Values",
+                field: "value",
                 editable: false,
                 width: 200
             }],
@@ -212,8 +217,8 @@ class Domain extends Component {
                 editable: false,
                 valueGetter: "node.id"
             },{
-                headerName: "member",
-                field: "member",
+                headerName: "Members",
+                field: "value",
                 editable: false,
                 width: 200
             }],

@@ -596,30 +596,98 @@ router.post("/searchKey", (req, res) => {
     let params = req.body;
 
     if (params.queryType !== 'GET') return; 
-    
+    let resJson = [];
     switch (params.tyKey) {
         case 'Strings':
-            
+            redis.get(params.psKey, (err, result) => {
+                 if (err) {
+                     return console.log(err);
+                 } else {
+                    resJson.push({
+                        'value': result
+                    })
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                 }
+            });
             break;
 
         case 'Lists':
-
+            redis.lrange(params.psKey, 0, -1, (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    result.map((item, index) => resJson.push({
+                        'idx': index,
+                        'value': item
+                    }));
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                }
+            });
             break;
         
         case 'Sets':
-
+            redis.smembers(params.psKey, (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    result.map(item => resJson.push({
+                        'value': item
+                    }));
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                }
+            });
             break;
 
         case 'SortedSets':
-
+            redis.zrange(params.psKey, 0, -1, 'WITHSCORES', (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    let format = {};
+                    result.map((item, index) => {
+                        if (index%2 === 0) {
+                            format.value = item;
+                        } else {
+                            format.score = item;
+                            resJson.push(format);
+                            format = {};
+                        }
+                    });
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                }
+            });
             break;
          
         case 'GeoSets':
-
+            //TBC
             break;   
 
         case 'Hashes':
-
+            redis.hgetall(params.psKey, (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    let format = {};
+                    let keys = Object.keys(result);
+                    keys.map((item) => {
+                        resJson.push({
+                            'field': item,
+                            'value': result[item]
+                        });
+                    });
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                }
+            });
             break;   
     }
 });
