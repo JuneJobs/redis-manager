@@ -534,18 +534,33 @@ class Domain extends Component {
         this._setMonitorCard();
         
     }
-    _bindHData = (parents, idx) => {
+    _bindHData = async (parents, idx) => {
         let tyKey = parents.state.cardDataSet[idx].tyKey,
-            psKey = parents.state.cardDatIDBIndex
+            psKey = parents.state.cardDataSet[idx].psKey
         
-        let hData = [{
-            value: 2
-        }];
-        parents.setState({
-            cardDataSet: parents.state.cardDataSet.map(
-                (item, index) => idx === index ? item.hdata = hData : item
-            )
-        });
+        // let hData = [{
+        //     value: 2
+        // }];
+        // parents.setState({
+        //     cardDataSet: parents.state.cardDataSet.map(
+        //         (item, index) => idx === index ? item.hdata = hData : item
+        //     )
+        // });
+
+        let params = {
+            "queryType": "GET",
+            "tyKey": tyKey,
+            "psKey": psKey
+        }
+        const response = await axios.post("/searchKey", params);
+        let data = response.data.payload
+        if (data.resCode === 0) { 
+           parents.setState({
+               cardDataSet: parents.state.cardDataSet.map(
+                   (item, index) => idx === index ? item.hdata = data : item
+               )
+           });
+        }
     }
     //Define Grid Component as a child of card.
     compStringsGrid = props => {
@@ -554,13 +569,13 @@ class Domain extends Component {
         this._bindHData(parents, idx);
         return (
             <div
-                    id="myGrid"
-                    style={{
-                    height: "100%",
-                    width: "100%"
-                    }}
-                    className="ag-theme-balham"
-                >
+                id="myGrid"
+                style={{
+                height: "100%",
+                width: "100%"
+                }}
+                className="ag-theme-balham"
+            >
                 <AgGridReact
                     idx={(this.onGridReady.idx = idx)}
                     columnDefs={columnDefs}
