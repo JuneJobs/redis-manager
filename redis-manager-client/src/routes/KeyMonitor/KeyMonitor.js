@@ -37,7 +37,9 @@ import Snackbar from '@material-ui/core/Snackbar';
 
 import IconButton from '@material-ui/core/IconButton';
 import DeleteIcon from '@material-ui/icons/Delete';
-import update from 'react-addons-update'
+
+import MonitorCard from '../../components/MonitorCard'
+//import update from 'react-addons-update'
 import { stat } from 'fs';
 
 const styles = theme => ({
@@ -177,7 +179,7 @@ const components = {
     SingleValue
 };
 
-class Domain extends Component {
+class KeyMonitor extends Component {
     constructor(props) {
         super(props);
         this.gridKeyType = {
@@ -350,13 +352,12 @@ class Domain extends Component {
             "queryType": "POST",
             "monTitle": this.state.monTitle,
             "psKey": this.state.newKey.value,
-            "tyKey": this.state.newKey.tyKey,
             "monType": this.state.monType,
             "sec": this.state.sec,
             "auto": false
         }
-        await axios.post("/MonitorList", params);
-
+        const result  = await axios.post("/MonitorList", params);
+        console.log(result);
         this.setState({
             open:false
         });
@@ -408,10 +409,7 @@ class Domain extends Component {
         });
     };
 
-    handleDeleteButton = async (event) => {
-        console.log(event.currentTarget.value);
-
-        let idx = parseInt(event.currentTarget.value);
+    handleDeleteButton = async (idx) => {
         let cardData = this.state.cardDataSet[idx];
         let params = {
             "queryType": "DELETE",
@@ -497,201 +495,40 @@ class Domain extends Component {
                 cardData = [];
             for (let i = 0; i < res.data.payload.length; i++) {
                 cardData = JSON.parse(res.data.payload[i]);
-                cardData.hdata = [{
-                    value: 1
-                }];
                 cardDataSet.push(cardData);
             }
-            this.setState({
-                'cardDataSet': cardDataSet
-            })
 
             // const bull = <span className={classes.bullet}>•</span>;
-            const children = [];        
-            for (var i = 0; i < this.state.cardDataSet.length; i++) {
-                children.push(
-                <this.ChildComponent
-                        idx={i}
-                        cardDataSet = {
-                            this.state.cardDataSet
-                        }
+            let cards = cardDataSet.map((cardData, index) => {
+                return <MonitorCard
+                idx = {
+                    index
+                }
+                cardDataSet = {
+                    cardData
+                }
+                handleDeleteButton = {this.handleDeleteButton}
                 />
-                );
-            };
+            });
+            
             this.setState({
-                'children': children
+                cardDataSet: cardDataSet,
+                cards: cards
             })
 
         } catch (e) {
             console.log(e);
         }
     }
-
-    componentDidMount = () => {  
-
-        this._setKeyList();
-
+    componentWillMount = () => {
         this._setMonitorCard();
-        
+        this._setKeyList();
     }
-    _bindHData = async (parents, idx) => {
-        let tyKey = parents.state.cardDataSet[idx].tyKey,
-            psKey = parents.state.cardDataSet[idx].psKey
-        
-        // let hData = [{
-        //     value: 2
-        // }];
-        // parents.setState({
-        //     cardDataSet: parents.state.cardDataSet.map(
-        //         (item, index) => idx === index ? item.hdata = hData : item
-        //     )
-        // });
 
-        let params = {
-            "queryType": "GET",
-            "tyKey": tyKey,
-            "psKey": psKey
-        }
-        const response = await axios.post("/searchKey", params);
-        let data = response.data.payload
-        if (data.resCode === 0) { 
-           parents.setState({
-               cardDataSet: parents.state.cardDataSet.map(
-                   (item, index) => idx === index ? item.hdata = data : item
-               )
-           });
-        }
-    }
-    //Define Grid Component as a child of card.
-    compStringsGrid = props => {
-        const {classes} = this.props;
-        const {idx, parents, columnDefs, defaultColDef} = props;
-        this._bindHData(parents, idx);
-        return (
-            <div
-                id="myGrid"
-                style={{
-                height: "100%",
-                width: "100%"
-                }}
-                className="ag-theme-balham"
-            >
-                <AgGridReact
-                    idx={(this.onGridReady.idx = idx)}
-                    columnDefs={columnDefs}
-                    defaultColDef={defaultColDef}
-                    //rowSelection={this.state.rowSelection}
-                    onGridReady={this.onGridReady}
-                    rowData={parents.state.cardDataSet[idx].hdata}
-                />
-            </div>
-        );
+    _onGridReady = (params) => {
+        this.gridApi = params.api;
+        this.gridColumnApi = params.columnApi;
     };
-
-    ChildComponent = props => {
-        const { classes } = this.props;
-        const { cardDataSet, idx } = props;
-
-        return (
-          <Card className={classes.newCard}>
-            <Typography
-              variant="h6"
-              color="inherit"
-              className={classes._h6Spacing}
-              noWrap
-            >
-              {cardDataSet[idx].monTitle}
-            </Typography>
-            <div className={classes.deleteButton}>
-              <IconButton
-                aria-label="Delete"
-                className={classes.margin}
-                value={idx}
-                onClick={this.handleDeleteButton}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </div>
-            <TextField
-              id="standard-name"
-              label="Search Key"
-              className={classes.textField}
-              value={cardDataSet[idx].psKey}
-              //onChange={this.handleChange('name')}
-              margin="normal"
-            />
-            <TextField
-              id="standard-name2"
-              label="Data Structure"
-              className={classes.txtStructure}
-              value={cardDataSet[idx].tyKey}
-              //onChange={this.handleChange('name')}
-              margin="normal"
-            />
-            <TextField
-              id="standard-name3"
-              label="Monitor Type"
-              className={classes.txtMonType}
-              value={cardDataSet[idx].monType}
-              //onChange={this.handleChange('name')}
-              margin="normal"
-            />
-            <TextField
-              id="standard-name4"
-              label="Auto search seconds"
-              className={classes.textField}
-              value={cardDataSet[idx].sec}
-              //onChange={this.handleChange('name')}
-              margin="normal"
-            />
-            <FormControlLabel
-              className={classes.Switch}
-              control={
-                <Switch
-                  checked={cardDataSet[idx].auto}
-                  onChange={this.handleAutoSearchChange}
-                  id={idx}
-                  value={cardDataSet[idx].auto}
-                />
-              }
-              label="Auto search"
-            />
-            <Fab
-              variant="extended"
-              size="small"
-              //color="extended"
-              aria-label="Add"
-              className={classes.Fab}
-            >
-              <CachedIcon className={classes.extendedIcon} />
-            </Fab>
-            <div
-              id="myGrid"
-              style={{
-                height: "100%",
-                width: "100%"
-              }}
-              className="ag-theme-balham"
-            >
-              {/* <AgGridReact
-                idx={(this.onGridReady.idx = idx)}
-                columnDefs={this.gridKeyType[cardDataSet[idx].dataType]}
-                defaultColDef={this.state.defaultColDef}
-                rowSelection={this.state.rowSelection}
-                onGridReady={this.onGridReady}
-                //onSelectionChanged={this.onSelectionChanged.bind(this)}
-                rowData={cardDataSet[idx].rowData}
-              /> */}
-            </div>
-            <this.compStringsGrid
-                idx={idx}
-                columnDefs={this.gridKeyType[cardDataSet[idx].tyKey]}
-                defaultColDef={this.state.defaultColDef}
-                parents = {this}
-            />
-          </Card>
-        );
-    };   
 
     render() {
 
@@ -706,7 +543,6 @@ class Domain extends Component {
                 }
             })
         };
-
         return (
             <div id="test">
                 <Card className={classes.card}>
@@ -734,7 +570,7 @@ class Domain extends Component {
                         </CardContent>
                     </Toolbar>
                 </Card>
-                {this.state.children}
+                {this.state.cards}
                 <Dialog
                     open={this.state.open}
                     onClose={this.handleClose}
@@ -834,8 +670,8 @@ class Domain extends Component {
     }
 }
 
-Domain.propTypes = {
+KeyMonitor.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles)(Domain);
+export default withStyles(styles)(KeyMonitor);

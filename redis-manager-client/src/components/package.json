@@ -1,0 +1,5 @@
+{
+    "private": true,
+    "name": "MonitorCard",
+    "main": "./MonitorCard.js"
+}

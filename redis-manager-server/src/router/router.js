@@ -419,19 +419,26 @@ router.post("/MonitorList", (req, res) => {
                            } else {
                                if (0 === result[0][1]) {
                                    delete params.queryType;
-                                   let listData = JSON.stringify(params);
-                                   redis.pipeline([
-                                       [`sadd`, `c:ml:search:idKey`, idKey],
-                                       [`rpush`, `c:ml:list`, listData],
-                                       [`setbit`, `c:km:used:mon`, idKey, 1]
-                                   ]).exec((err, result) => {
-                                       if (err) {
-                                           return console.log(err)
-                                       } else {
-                                           response.resCode = resCode.SUCCESS;
-                                           response.payload = [];
-                                           res.send(response);
-                                       }
+                                   redis.get(`c:km:${idKey}:tyKey`, (err, tyKey) => {
+                                        if (err) {
+                                            return console.log(err)
+                                        } else {
+                                            params.tyKey = tyKey;
+                                            let listData = JSON.stringify(params);
+                                            redis.pipeline([
+                                                [`sadd`, `c:ml:search:idKey`, idKey],
+                                                [`rpush`, `c:ml:list`, listData],
+                                                [`setbit`, `c:km:used:mon`, idKey, 1]
+                                            ]).exec((err, result) => {
+                                                if (err) {
+                                                    return console.log(err)
+                                                } else {
+                                                    response.resCode = resCode.SUCCESS;
+                                                    response.payload = [];
+                                                    res.send(response);
+                                                }
+                                            });
+                                        }
                                    });
                                } else {
                                    response.resCode = resCode.DUPLICATION;
