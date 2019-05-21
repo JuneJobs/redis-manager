@@ -28,17 +28,13 @@ import MenuItem from '@material-ui/core/MenuItem';
 import NativeSelect from "@material-ui/core/Select";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from "@material-ui/core/Switch";
-import CachedIcon from '@material-ui/icons/Cached';
 
 import Select from 'react-select';
 import Snackbar from '@material-ui/core/Snackbar';
 
-import IconButton from '@material-ui/core/IconButton';
-import DeleteIcon from '@material-ui/icons/Delete';
+import MonitorCardType1 from '../../components/MonitorCardType1/MonitorCardType1'
+import MonitorCardType2 from '../../components/MonitorCardType2/MonitorCardType2'
 
-import MonitorCard from '../../components/MonitorCard'
 //import update from 'react-addons-update'
 import { stat } from 'fs';
 
@@ -50,20 +46,10 @@ const styles = theme => ({
     _h6Spacing: {
         margin: '0 10px',   
     },
-    textField: {
-        marginLeft: theme.spacing.unit,
-        marginRight: theme.spacing.unit,
-        width: 200,
-    },
     txtStructure: {
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
         width: 120
-    },
-    txtMonType: {
-        marginLeft: theme.spacing.unit,
-        marginRight: theme.spacing.unit,
-        width: 120,
     },
     Switch: {
         marginRight: theme.spacing.unit,
@@ -84,11 +70,6 @@ const styles = theme => ({
         minHeight: 65,
         margin: theme.spacing.unit,
     },
-    newCard: {
-        minWidth: 575,
-        minHeight: 200,
-        margin: theme.spacing.unit,
-    },
     title: {
         fontSize: 14,
     },
@@ -98,13 +79,6 @@ const styles = theme => ({
     addMonitor: {
         textAlign: 'right',
         width: '100%'
-    },
-    deleteButton: {
-        textAlign: 'right',
-        width: '100%'
-    },
-    closeCard: {
-        textAlign: 'right',
     },
     open: false,
     formControl: {
@@ -182,105 +156,6 @@ const components = {
 class KeyMonitor extends Component {
     constructor(props) {
         super(props);
-        this.gridKeyType = {
-            Strings: [{
-                headerName: "ID",
-                type: 'string',
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            },{
-                headerName: "Value",
-                field: "value",
-                editable: false,
-                width: 200
-            }],
-            Lists: [{
-                headerName: "ID",
-                type: 'list',
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            }, {
-                headerName: "Index",
-                field: "idx",
-                editable: false,
-                width: 200
-            }, {
-                headerName: "Values",
-                field: "value",
-                editable: false,
-                width: 200
-            }],
-            Sets: [{
-                headerName: "ID",
-                type: 'set',
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            },{
-                headerName: "Members",
-                field: "value",
-                editable: false,
-                width: 200
-            }],
-            SortedSets: [{
-                headerName: "ID",
-                type: 'sortedSet',
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            },{
-                headerName: "score",
-                field: "score",
-                editable: false,
-                width: 200
-            },{
-                headerName: "member",
-                field: "member",
-                editable: false,
-                width: 200
-            }],
-            GeoSets: [{
-                headerName: "ID",
-                type: 'geoSet',
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            },{
-                headerName: "longitude",
-                field: "lng",
-                editable: false,
-                width: 200
-            },{
-                headerName: "latitude",
-                field: "lat",
-                editable: false,
-                width: 200
-            },{
-                headerName: "member",
-                field: "member",
-                editable: false,
-                width: 200
-            }],
-            Hashes: [{
-                headerName: "ID",
-                type: 'hash',
-                width: 60,
-                editable: false,
-                valueGetter: "node.id"
-            },{
-                headerName: "field",
-                field: "field",
-                editable: false,
-                width: 200
-            },{
-                headerName: "value",
-                field: "value",
-                editable: false,
-                width: 200
-            }]
-        };
 
         this.state = {
             numChildren: 0,
@@ -293,6 +168,7 @@ class KeyMonitor extends Component {
             monType: 'single',
             newKey: null,
             keys: null,
+            addMonitorKeys: null,
             monTitle: null,
             sec: 20,
             snackBar: {
@@ -376,8 +252,26 @@ class KeyMonitor extends Component {
     // }
 
     handleMonTypeSelectChange = name => event => {
+        //event.target.value
+        let keys = [];
+        if (event.target.value === 'single') {
+            this.state.keys.map((item) => {
+                if (item.value.indexOf('*') === -1) {
+                    keys.push(item);
+                }
+            })
+        } else {
+            this.state.keys.map((item) => {
+                if (item.value.indexOf('*') !== -1) {
+                    keys.push(item);
+                }
+            })
+        }
+
         this.setState({
-            [name]: event.target.value
+            addMonitorKeys: keys,
+            [name]: event.target.value,
+            newKey: null
         });
     };
 
@@ -387,13 +281,13 @@ class KeyMonitor extends Component {
         });
     };
 
-    handletxtMonTitleChange = name => value => {
+    handleTxtMonTitleChange = name => value => {
         let newTitleStr = value.target.value;
         this.setState({
             [name]: newTitleStr
         });
     };
-    handletxtSearchSecChange = name => event => {
+    handleTxtSearchSecChange = name => event => {
         this.setState({
             [name]: event.target.value
         });
@@ -473,9 +367,18 @@ class KeyMonitor extends Component {
                 }
                 return 0;
             });
+
+            let addMonitorKeys = [];
+            keys.map((item) => {
+                if (item.value.indexOf('*') === -1) {
+                    addMonitorKeys.push(item);
+                }
+            });
+
             console.log(keys);
             this.setState({
-                'keys': keys
+                'keys': keys,
+                'addMonitorKeys': addMonitorKeys
             })
         } catch (e) {
             console.log(e);
@@ -500,15 +403,28 @@ class KeyMonitor extends Component {
 
             // const bull = <span className={classes.bullet}>•</span>;
             let cards = cardDataSet.map((cardData, index) => {
-                return <MonitorCard
-                idx = {
-                    index
+                if(cardData.monType === 'single') {
+                    return <MonitorCardType1
+                        idx = {
+                            index
+                        }
+                        cardDataSet = {
+                            cardData
+                        }
+                        handleDeleteButton = {this.handleDeleteButton}
+                    />
+                } else {
+                    return <MonitorCardType2
+                        idx = {
+                            index
+                        }
+                        cardDataSet = {
+                            cardData
+                        }
+                        handleDeleteButton = {this.handleDeleteButton}
+                    />
                 }
-                cardDataSet = {
-                    cardData
-                }
-                handleDeleteButton = {this.handleDeleteButton}
-                />
+                
             });
             
             this.setState({
@@ -520,6 +436,7 @@ class KeyMonitor extends Component {
             console.log(e);
         }
     }
+
     componentWillMount = () => {
         this._setMonitorCard();
         this._setKeyList();
@@ -589,7 +506,7 @@ class KeyMonitor extends Component {
                         fullWidth
                         margin="normal"
                         value={this.state.monTitle}
-                        onChange={this.handletxtMonTitleChange('monTitle')}
+                        onChange={this.handleTxtMonTitleChange('monTitle')}
                         InputLabelProps={{
                             shrink: true
                         }}
@@ -623,7 +540,7 @@ class KeyMonitor extends Component {
                             shrink: true,
                         },
                         }}
-                        options={this.state.keys}
+                        options={this.state.addMonitorKeys}
                         components={components}
                         value={this.state.newKey}
                         onChange={this.handlePsKeyChange('newKey')}
@@ -639,7 +556,7 @@ class KeyMonitor extends Component {
                         fullWidth
                         margin = "normal"
                         value={this.state.sec}
-                        onChange={this.handletxtSearchSecChange('sec')}
+                        onChange={this.handleTxtSearchSecChange('sec')}
                         InputLabelProps = {
                             {
                                 shrink: true

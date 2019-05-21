@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
+import CardContent from '@material-ui/core/CardContent';
 import TextField from '@material-ui/core/TextField';
 import IconButton from '@material-ui/core/IconButton';
 import DeleteIcon from '@material-ui/icons/Delete';
@@ -9,21 +10,45 @@ import {
     AgGridReact
 }
 from 'ag-grid-react';
+import 'ag-grid-community/dist/styles/ag-grid.css';
+import 'ag-grid-community/dist/styles/ag-theme-balham.css';
 import Fab from '@material-ui/core/Fab';
 import axios from "axios";
 import Switch from "@material-ui/core/Switch";
 import CachedIcon from '@material-ui/icons/Cached';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import PropTypes from 'prop-types';
+import Grid from '@material-ui/core/Grid';
 const styles = theme => ({
     newCard: {
         minWidth: 575,
         minHeight: 200,
         margin: theme.spacing.unit,
     },
+    card: {
+        minWidth: 275,
+        minHeight: 800
+    },
+    deleteButton: {
+        textAlign: 'right',
+        width: '100%'
+    },
+    textField: {
+        marginLeft: theme.spacing.unit,
+        marginRight: theme.spacing.unit,
+        width: 200,
+    },
+    txtMonType: {
+        marginLeft: theme.spacing.unit,
+        marginRight: theme.spacing.unit,
+        width: 100,
+    },
+    _h6Spacing: {
+        margin: '0 10px',
+    },
 })
 
-class MonitorCard extends Component {
+class MonitorCardType1 extends Component {
     constructor(props) {
         super(props);
             
@@ -40,10 +65,25 @@ class MonitorCard extends Component {
             monType: props.cardDataSet.monType,
             auto: props.cardDataSet.auto,
             sec: props.cardDataSet.sec,
-            hData: []
+            hData: [],
+            selectedHKey: null,
+            dTyKey: 'Strings',
+            dData: []
         };
 
         this.gridKeyType = {
+            Keys: [{
+                headerName: "ID",
+                type: 'string',
+                width: 60,
+                editable: false,
+                valueGetter: "node.id"
+            }, {
+                headerName: "Keys",
+                field: "value",
+                editable: false,
+                width: 200
+            }],
             Strings: [{
                 headerName: "ID",
                 type: 'string',
@@ -92,13 +132,13 @@ class MonitorCard extends Component {
                 editable: false,
                 valueGetter: "node.id"
             }, {
-                headerName: "score",
+                headerName: "Score",
                 field: "score",
                 editable: false,
                 width: 200
             }, {
-                headerName: "member",
-                field: "member",
+                headerName: "Member",
+                field: "value",
                 editable: false,
                 width: 200
             }],
@@ -131,12 +171,12 @@ class MonitorCard extends Component {
                 editable: false,
                 valueGetter: "node.id"
             }, {
-                headerName: "field",
+                headerName: "Field",
                 field: "field",
                 editable: false,
                 width: 200
             }, {
-                headerName: "value",
+                headerName: "Value",
                 field: "value",
                 editable: false,
                 width: 200
@@ -169,42 +209,87 @@ class MonitorCard extends Component {
         this._bindHData();
     };
     _bindHData = () => {
-        let tyKey = this.state.tyKey,
-            psKey = this.state.psKey,
+        let psKey = this.state.psKey,
             params = {
                 "queryType": "GET",
-                "tyKey": tyKey,
                 "psKey": psKey
             };
-        axios.post("/searchKey", params).then((response) => {
-            let data = response.data.payload
+        axios.post("/searchKeyList", params).then((response) => {
+            let data = response.data.payload;
             if (response.data.resCode === 0) {
-                
                 this.setState({
-                   hData: data
+                    hData: data
                 });
 
             }
         }).catch((error) => {
             console.log(error);
         });
-
     }
-    _onGridReady = (params) => {
+    _bindDData = () => {
+        let psKey = this.state.selectedHKey,
+            params = {
+                "queryType": "GET",
+                "tyKey": 'Keys',
+                "psKey": psKey
+            };
+        axios.post("/searchKey", params).then((response) => {
+            if (response.data.resCode === 0) {
+                let tyKey = response.data.payload;
+                this.setState({
+                    dTyKey : tyKey
+                });
+                //change grid type
+
+                params = {
+                    "queryType": "GET",
+                    "tyKey": tyKey,
+                    "psKey": psKey
+                };
+                axios.post("/searchKey", params).then((response) => {
+                    let data = response.data.payload;
+                    if (response.data.resCode === 0) {
+                        this.setState({
+                            dData: data
+                        });
+
+                    }
+                }).catch((error) => {
+                    console.log(error);
+                });
+            }
+        }).catch((error) => {
+            console.log(error);
+        });
+        
+    }
+    _onHDataGridReady = (params) => {
+        this.gridApi = params.api;
+        this.gridColumnApi = params.columnApi;
+    };
+    _onDDataGridReady = (params) => {
         this.gridApi = params.api;
         this.gridColumnApi = params.columnApi;
     };
     _handleDeleteButton = () => {
         this.props.handleDeleteButton(this.state.idx);
     }
+    _onSelectionChanged = (e) => {
+        let selectedRows = e.value;
+        this.setState({
+            selectedHKey: selectedRows
+        });
+        this._bindDData();
+    }
+    
     componentDidMount(){
         this._bindHData()
     }
     render() {
-        const {classes, idx, cardDataSet} = this.props;
-        
+        const {classes} = this.props;
         return (
             <Card className={classes.newCard}>
+            <CardContent>
             <Typography
               variant="h6"
               color="inherit"
@@ -224,6 +309,13 @@ class MonitorCard extends Component {
               </IconButton>
             </div>
             <TextField
+              id="standard-name3"
+              label="Monitor Type"
+              className={classes.txtMonType}
+              value={this.state.monType}
+              margin="normal"
+            />
+            <TextField
               id="standard-name"
               label="Search Key"
               className={classes.textField}
@@ -239,22 +331,6 @@ class MonitorCard extends Component {
               //onChange={this.handleChange('name')}
               margin="normal"
             />
-            <TextField
-              id="standard-name3"
-              label="Monitor Type"
-              className={classes.txtMonType}
-              value={this.state.monType}
-              //onChange={this.handleChange('name')}
-              margin="normal"
-            />
-            <TextField
-              id="standard-name4"
-              label="Auto search seconds"
-              className={classes.textField}
-              value={this.state.sec}
-              //onChange={this.handleChange('name')}
-              margin="normal"
-            />
             <FormControlLabel
               className={classes.Switch}
               control={
@@ -266,6 +342,14 @@ class MonitorCard extends Component {
                 />
               }
               label="Auto search"
+            />
+            <TextField
+              id="standard-name4"
+              label="Auto search seconds"
+              className={classes.textField}
+              value={this.state.sec}
+              //onChange={this.handleChange('name')}
+              margin="normal"
             />
             <Fab
               variant="extended"
@@ -286,28 +370,52 @@ class MonitorCard extends Component {
                 //onSelectionChanged={this.onSelectionChanged.bind(this)}
                 rowData={cardDataSet[idx].rowData}
               /> */}
-            <div
-                id="myGrid"
-                style={{
-                height: "100%",
-                width: "100%"
-                }}
-                className="ag-theme-balham"
-            >
-                <AgGridReact
-                    idx={this.state.idx}
-                    columnDefs={this.gridKeyType[this.state.tyKey]}
-                    defaultColDef={this.state.defaultColDef}
-                    //rowSelection={this.state.rowSelection}
-                    onGridReady={this._onGridReady}
-                    rowData={this.state.hData}
-                />
-            </div>
-          </Card>     
+            <Grid container spacing={24}>
+                <Grid item xs={12} sm={4}>
+                    <div
+                        id="hGrid"
+                        style={{
+                        height: "100%",
+                        width: "100%"
+                        }}
+                        className="ag-theme-balham"
+                    >
+                        <AgGridReact
+                            columnDefs={this.gridKeyType[this.state.tyKey]}
+                            defaultColDef={this.state.defaultColDef}
+                            rowSelection={this.state.selectedHKey}
+                            onGridReady={this._onHDataGridReady}
+                            onSelectionChanged={this._onSelectionChanged.bind(this)}
+                            onCellClicked={this._onSelectionChanged.bind(this)}
+                            rowData={this.state.hData}
+                        />
+                    </div>
+                </Grid>
+                <Grid item xs={12} sm={8}>
+                    <div
+                        id="myGrid2"
+                        style={{
+                        height: "100%",
+                        width: "100%"
+                        }}
+                        className="ag-theme-balham"
+                    >
+                        <AgGridReact
+                            columnDefs={this.gridKeyType[this.state.dTyKey]}
+                            defaultColDef={this.state.defaultColDef}
+                            onGridReady={this._onDDataGridReady}
+                            rowData={this.state.dData}
+                        />
+                    </div>
+                </Grid>
+            </Grid>
+
+            </CardContent>
+            </Card>     
         )
     }
 }
-MonitorCard.propTypes = {
+MonitorCardType1.propTypes = {
     classes: PropTypes.object.isRequired,
 };
-export default withStyles(styles)(MonitorCard);
+export default withStyles(styles)(MonitorCardType1);

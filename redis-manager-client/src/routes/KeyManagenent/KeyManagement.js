@@ -292,7 +292,10 @@ class KeyManagement extends React.Component {
         try {
             const res = await axios.post("/domain", params);
             console.log(res);
-            let domains = [];
+            let domains = [{
+                lgDom: '*',
+                psDom: '*'
+            }];
 
             res.data.payload.map((object) => {
                 domains.push({
@@ -311,7 +314,6 @@ class KeyManagement extends React.Component {
                 }
                 return 0;
             });
-
             this.setState({
                 domains: domains.map(domain => ({
                 label: domain.lgDom,
@@ -423,8 +425,20 @@ class KeyManagement extends React.Component {
         };
         try {
             const response = await axios.post("/keys", params);
+            let rowdata = response.data.payload
+            rowdata.sort(function (a, b) {
+                let keyA = a.psKey.toUpperCase(); // ignore upper and lowercase
+                let keyB = b.psKey.toUpperCase(); // ignore upper and lowercase
+                if (keyA < keyB) {
+                    return -1;
+                }
+                if (keyA > keyB) {
+                    return 1;
+                }
+                return 0;
+            });
             this.setState({
-                rowData: response.data.payload
+                rowData: rowdata
             });
             if (response.data.payload > 0) {
                 this.selectFirstNode();
@@ -718,9 +732,7 @@ class KeyManagement extends React.Component {
                         defaultColDef={this.state.defaultColDef}
                         rowSelection={this.state.rowSelection}
                         onGridReady={this.onGridReady}
-                        onSelectionChanged={this.onSelectionChanged.bind(
-                        this
-                        )}
+                        onSelectionChanged={this.onSelectionChanged.bind(this)}
                         rowData={this.state.rowData}
                     />
                     </div>
