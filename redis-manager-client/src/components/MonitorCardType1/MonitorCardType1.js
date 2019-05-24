@@ -61,7 +61,7 @@ class MonitorCardType1 extends Component {
             sec: props.cardDataSet.sec,
             hData: []
         };
-
+        this.autoSearchId = '';
         this.gridKeyType = {
             Keys: [{
                 headerName: "ID",
@@ -195,11 +195,23 @@ class MonitorCardType1 extends Component {
             "auto": value
         }
         await axios.post("/MonitorList", params);
+        this._controlSearch();
     }
     handleRefreshClick = () => {
         this._bindHData();
     };
-    //문제점
+    _controlSearch = () => {
+        if (this.autoSearchId === '') return;
+        if (this.state.auto) {
+            let timerId = setInterval(()=>{this._bindHData()}, parseInt(this.state.sec) * 1000);
+            this.autoSearchId = timerId;
+        } else {
+            if (this.autoSearchId !== '') {
+                clearInterval(this.autoSearchId);
+                this.autoSearchId = '';
+            }
+        }
+    }
     _bindHData = () => {
         if(this.state.monType === 'single') {
             let tyKey = this.state.tyKey,
@@ -238,7 +250,7 @@ class MonitorCardType1 extends Component {
                 console.log(error);
             });
         }
-       
+        
 
     }
     _onGridReady = (params) => {
@@ -246,10 +258,12 @@ class MonitorCardType1 extends Component {
         this.gridColumnApi = params.columnApi;
     };
     _handleDeleteButton = () => {
+        
         this.props.handleDeleteButton(this.state.idx);
     }
     componentDidMount(){
-        this._bindHData()
+        this._bindHData();
+        this._controlSearch();
     }
     render() {
         const {classes, idx, cardDataSet} = this.props;
@@ -265,16 +279,6 @@ class MonitorCardType1 extends Component {
                     >
                     {this.state.monTitle}
                     </Typography>
-                    <div className={classes.deleteButton}>
-                    <IconButton
-                        aria-label="Delete"
-                        className={classes.margin}
-                        value={this.state.car}
-                        onClick={this._handleDeleteButton}
-                    >
-                        <DeleteIcon fontSize="small" />
-                    </IconButton>
-                    </div>
                     <TextField
                     id="standard-name3"
                     label="Monitor Type"
@@ -328,6 +332,14 @@ class MonitorCardType1 extends Component {
                     >
                     <CachedIcon className={classes.extendedIcon} />
                     </Fab>
+                    <IconButton
+                        aria-label="Delete"
+                        className={classes.margin}
+                        value={this.state.car}
+                        onClick={this._handleDeleteButton}
+                    >
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
                     {/* <AgGridReact
                         idx={(this.onGridReady.idx = idx)}
                         columnDefs={this.gridKeyType[cardDataSet[idx].dataType]}

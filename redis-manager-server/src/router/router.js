@@ -349,25 +349,45 @@ router.post("/keys", (req, res) => {
                     if (_Exists(idKey)) {
                     //모니터 셋에 사용되는 키가 존재하는지 확인
                         redis.pipeline([
-                            ['bitpos', `c:km:used:mon`, 1]
+                            ['getbit', `c:km:used:mon`, idKey]
                         ]).exec((err, result) => {
                             if (err) {
                                 return console.log(err)
                             } else { 
-                                if (result[0][1] === -1) {
-                                    redis.pipeline([
-                                        ['del', `c:km:${idKey}:psKey`],
-                                        ['del', `c:km:${idKey}:lgKey`],
-                                        ['del', `c:km:${idKey}:ptKey`],
-                                        ['del', `c:km:${idKey}:tyKey`],
-                                        ['del', `c:km:${idKey}:idKey`],
-                                        [`hdel`, `c:km:search:psKey:idKey`, params.psKey],
-                                        ['del', `c:km:used:mon`]
-                                    ]).exec((err, result) => {
-                                        response.resCode = resCode.SUCCESS;
-                                        response.payload = [];
-                                        res.send(response);
+                                if (result[0][1] === 0) {
+                                    let commandSet = ['hmget', 'c:dm:search:psDom:idDom'];
+                                    let domains = params.psKey.split(':');
+                                    for (let i = 0; i < domains.length; i++) {
+                                        if (domains[i] != '*')
+                                        commandSet.push(domains[i]);
+                                        
+                                    }
+                                    redis.pipeline([commandSet]).exec((err, idDoms) => {
+                                        if(err) {console.log(err);} else {
+                                            commandSet = [];
+                                            idDoms = idDoms[0][1];
+                                            idDoms.map((idDom) => {
+                                                commandSet.push([`srem`, `c:dm:${idDom}:used`, idKey]);
+                                            });
+                                            commandSet.push(['del', `c:km:${idKey}:psKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:lgKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:ptKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:tyKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:idKey`]);
+                                            commandSet.push([`hdel`, `c:km:search:psKey:idKey`, params.psKey]);
+                                            console.log(commandSet);
+                                            redis.pipeline(commandSet).exec((err, result) => {
+                                                response.resCode = resCode.SUCCESS;
+                                                response.payload = [];
+                                                res.send(response);
+                                            });
+                                        }
+                                        
                                     });
+                                    // idDoms.map((idDom) => {
+                                    //     commandSet.push([`sadd`, `c:dm:${idDom}:used`, newIdKey]);
+                                    // });
+                                    
                                 } else {
                                     response.resCode = resCode.USING;
                                     response.payload = [];
@@ -419,7 +439,7 @@ router.post("/MonitorList", (req, res) => {
                             } else {
                                if (0 === result[0][1]) {
                                    delete params.queryType;
-                                    if(params.tyKey === 'single') {
+                                    if(params.monType === 'single') {
                                         redis.get(`c:km:${idKey}:tyKey`, (err, tyKey) => {
                                             if (err) {
                                                 return console.log(err)
@@ -599,19 +619,21 @@ router.post("/MonitorList", (req, res) => {
                             if (err) {
                                 return console.log(err);
                             } else {
-                                if (params.curIdx + 1 !== result) {
-                                     redis.multi([
-                                         ['ltrim', 'c:ml:list', params.curIdx+1, -1],
-                                         [`setbit`, `c:km:used:mon`, idKey, 0],
-                                         [`srem`, `c:ml:search:idKey`, idKey]
-                                     ]).exec((err, result) => {
-                                         if (err) { return console.log(err); } else {
-                                             response.resCode = resCode.SUCCESS;
-                                             response.payload = [];
-                                             res.send(response);
-                                         }
-                                     });
-                                } else {
+                                if (params.curIdx + 1 === 1){
+                                    redis.multi([
+                                        ['lpop', 'c:ml:list'],
+                                        [`setbit`, `c:km:used:mon`, idKey, 0],
+                                        [`srem`, `c:ml:search:idKey`, idKey]
+                                    ]).exec((err, result) => {
+                                        if (err) {
+                                            return console.log(err);
+                                        } else {
+                                            response.resCode = resCode.SUCCESS;
+                                            response.payload = [];
+                                            res.send(response);
+                                        }
+                                    });
+                                } else if (params.curIdx + 1 === result) {
                                     redis.multi([
                                         ['rpop', 'c:ml:list'],
                                         [`setbit`, `c:km:used:mon`, idKey, 0],
@@ -626,6 +648,39 @@ router.post("/MonitorList", (req, res) => {
                                         }
                                     });
                                 }
+                                else {
+                                    redis.lrange('c:ml:list', 0, params.curIdx-1, (err, headList) => {
+                                        if (err) { return console.log(err); } else {
+                                            let command = ['lpush', 'c:ml:list'];
+                                            for (let i = headList.length-1; i >= 0; i--) {
+                                                command.push(headList[i])                                             
+                                            }
+                                            redis.multi([
+                                                ['ltrim', 'c:ml:list', params.curIdx + 1, -1],
+                                                [`setbit`, `c:km:used:mon`, idKey, 0],
+                                                [`srem`, `c:ml:search:idKey`, idKey],
+                                                command
+                                            ]).exec((err, result) => {
+                                                if (err) {
+                                                    return console.log(err);
+                                                } else {
+                                                    response.resCode = resCode.SUCCESS;
+                                                    response.payload = [];
+                                                    res.send(response);
+                                                    // redis.multi([
+                                                    //     command
+                                                    // ]).exec((err, result) => {
+                                                    //     if(err) {return console.log(err)} else {
+                                                            
+                                                    //     }
+                                                    // });
+                                                }
+                                            });
+                                        }
+                                    });
+                                    
+                                    
+                                } 
                             }
                             console.log(result);
                         })

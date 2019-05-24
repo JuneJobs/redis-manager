@@ -70,7 +70,7 @@ class MonitorCardType1 extends Component {
             dTyKey: 'Strings',
             dData: []
         };
-
+        this.autoSearchId = '';
         this.gridKeyType = {
             Keys: [{
                 headerName: "ID",
@@ -204,10 +204,25 @@ class MonitorCardType1 extends Component {
             "auto": value
         }
         await axios.post("/MonitorList", params);
+        this._controlSearch();
     }
     handleRefreshClick = () => {
         this._bindHData();
     };
+    _controlSearch = () => {
+        if (this.state.auto) {
+            if (this.autoSearchId ==='') return;
+            let timerId = setInterval(() => {
+                this._bindHData()
+            }, parseInt(this.state.sec) * 1000);
+            this.autoSearchId = timerId;
+        } else {
+            if (this.autoSearchId !== '') {
+                clearInterval(this.autoSearchId);
+                this.autoSearchId = '';
+            }
+        }
+    }
     _bindHData = () => {
         let psKey = this.state.psKey,
             params = {
@@ -261,6 +276,19 @@ class MonitorCardType1 extends Component {
         }).catch((error) => {
             console.log(error);
         });
+        // if(this.state.auto) {
+        //     let timerId = setInterval(this.__bindHData(), this.state.sec*1000);
+        //     this.setState({
+        //         autoSearchId: timerId
+        //     })
+        // } else {
+        //     if(this.state.autoSearchId != ''){
+        //         clearInterval(this.state.autoSearchId);
+        //         this.setState({
+        //             autoSearchId: ''
+        //         })
+        //     }
+        // }
         
     }
     _onHDataGridReady = (params) => {
@@ -283,7 +311,8 @@ class MonitorCardType1 extends Component {
     }
     
     componentDidMount(){
-        this._bindHData()
+        this._bindHData();
+        this._controlSearch();
     }
     render() {
         const {classes} = this.props;
@@ -298,16 +327,6 @@ class MonitorCardType1 extends Component {
             >
               {this.state.monTitle}
             </Typography>
-            <div className={classes.deleteButton}>
-              <IconButton
-                aria-label="Delete"
-                className={classes.margin}
-                value={this.state.car}
-                onClick={this._handleDeleteButton}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </div>
             <TextField
               id="standard-name3"
               label="Monitor Type"
@@ -361,15 +380,14 @@ class MonitorCardType1 extends Component {
             >
             <CachedIcon className={classes.extendedIcon} />
             </Fab>
-              {/* <AgGridReact
-                idx={(this.onGridReady.idx = idx)}
-                columnDefs={this.gridKeyType[cardDataSet[idx].dataType]}
-                defaultColDef={this.state.defaultColDef}
-                rowSelection={this.state.rowSelection}
-                onGridReady={this.onGridReady}
-                //onSelectionChanged={this.onSelectionChanged.bind(this)}
-                rowData={cardDataSet[idx].rowData}
-              /> */}
+            <IconButton
+                aria-label="Delete"
+                className={classes.margin}
+                value={this.state.car}
+                onClick={this._handleDeleteButton}
+            >
+                <DeleteIcon fontSize="small" />
+            </IconButton>
             <Grid container spacing={24}>
                 <Grid item xs={12} sm={4}>
                     <div

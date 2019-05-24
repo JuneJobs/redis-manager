@@ -170,7 +170,7 @@ class KeyMonitor extends Component {
             keys: null,
             addMonitorKeys: null,
             monTitle: null,
-            sec: 20,
+            sec: 5,
             snackBar: {
                 open: false,
                 vertical: 'top',
@@ -402,6 +402,9 @@ class KeyMonitor extends Component {
             }
 
             // const bull = <span className={classes.bullet}>•</span>;
+            this.setState({
+                cards: null
+            })
             let cards = cardDataSet.map((cardData, index) => {
                 if(cardData.monType === 'single') {
                     return <MonitorCardType1
