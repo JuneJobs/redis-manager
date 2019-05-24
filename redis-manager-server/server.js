@@ -19,5 +19,5 @@ require('./src/router/router');
 
 //Server runner
 app.listen(_apiPort, function () {
-    console.log("server running on 8080");
+    console.log(`server running on ${_apiPort}`);
 });
