@@ -4,6 +4,7 @@
 const config = require('./src/config/default.json');
 const bodyParser = require("body-parser");
 const express = require("express");
+var cors = require('cors')
 //Import msg module
 
 const _apiPort = config.webServicePort;
@@ -12,6 +13,7 @@ global.router = express.Router();
 global.path = __dirname;
 
 app.use(bodyParser.json()); // support json encoded bodies
+app.use(cors());
 app.use("/", router);
 
 require('./src/router/router');
