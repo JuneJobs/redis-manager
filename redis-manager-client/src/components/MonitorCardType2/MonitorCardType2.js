@@ -19,6 +19,12 @@ import CachedIcon from '@material-ui/icons/Cached';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import PropTypes from 'prop-types';
 import Grid from '@material-ui/core/Grid';
+const axiosConfig = {
+    headers: {
+        'Content-Type': 'application/json;charset=UTF-8',
+        "Access-Control-Allow-Origin": "*",
+    }
+};
 const styles = theme => ({
     newCard: {
         minWidth: 575,
@@ -203,7 +209,7 @@ class MonitorCardType1 extends Component {
             "curIdx": this.state.idx,
             "auto": value
         }
-        await axios.post("/MonitorList", params);
+        await axios.post("/MonitorList", params, axiosConfig);
         this._controlSearch();
     }
     handleRefreshClick = () => {
@@ -229,7 +235,7 @@ class MonitorCardType1 extends Component {
                 "queryType": "GET",
                 "psKey": psKey
             };
-        axios.post("/searchKeyList", params).then((response) => {
+        axios.post("/searchKeyList", params, axiosConfig).then((response) => {
             let data = response.data.payload;
             if (response.data.resCode === 0) {
                 this.setState({
@@ -248,7 +254,7 @@ class MonitorCardType1 extends Component {
                 "tyKey": 'Keys',
                 "psKey": psKey
             };
-        axios.post("/searchKey", params).then((response) => {
+        axios.post("/searchKey", params, axiosConfig).then((response) => {
             if (response.data.resCode === 0) {
                 let tyKey = response.data.payload;
                 this.setState({
@@ -261,7 +267,7 @@ class MonitorCardType1 extends Component {
                     "tyKey": tyKey,
                     "psKey": psKey
                 };
-                axios.post("/searchKey", params).then((response) => {
+                axios.post("/searchKey", params, axiosConfig).then((response) => {
                     let data = response.data.payload;
                     if (response.data.resCode === 0) {
                         this.setState({

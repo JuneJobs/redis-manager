@@ -37,7 +37,12 @@ import MonitorCardType2 from '../../components/MonitorCardType2/MonitorCardType2
 
 //import update from 'react-addons-update'
 import { stat } from 'fs';
-
+const axiosConfig = {
+    headers: {
+        'Content-Type': 'application/json;charset=UTF-8',
+        "Access-Control-Allow-Origin": "*",
+    }
+};
 const styles = theme => ({
     container: {
         display: 'flex',
@@ -232,7 +237,7 @@ class KeyMonitor extends Component {
             "sec": this.state.sec,
             "auto": false
         }
-        const result  = await axios.post("/MonitorList", params);
+        const result = await axios.post("/MonitorList", params, axiosConfig);
         console.log(result);
         this.setState({
             open:false
@@ -310,7 +315,7 @@ class KeyMonitor extends Component {
             "curIdx": idx,
             "psKey": cardData.psKey
         }
-        await axios.post("/MonitorList", params);
+        await axios.post("/MonitorList", params, axiosConfig);
         this._setMonitorCard();
     }
 
@@ -328,7 +333,7 @@ class KeyMonitor extends Component {
             "curIdx": idx,
             "auto": value
         }
-        await axios.post("/MonitorList", params);
+        await axios.post("/MonitorList", params, axiosConfig);
         this._setMonitorCard();
     }
 
@@ -345,7 +350,7 @@ class KeyMonitor extends Component {
             "queryType": "GET"
         };
         try {
-            const res = await axios.post("/keys", params);
+            const res = await axios.post("/keys", params, axiosConfig);
             console.log(res);
             let keys = [];
 
@@ -391,7 +396,7 @@ class KeyMonitor extends Component {
             "queryType": "GET"
         };
         try {
-            const res = await axios.post("/MonitorList", params);
+            const res = await axios.post("/MonitorList", params, axiosConfig);
             //res.data.payload
             console.log(res.data.payload);
             let cardDataSet = [],

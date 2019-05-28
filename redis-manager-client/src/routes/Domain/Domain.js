@@ -14,7 +14,12 @@ import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-balham.css';
 import axios from "axios";
 import 'typeface-roboto';
-
+const axiosConfig = {
+    headers: {
+        'Content-Type': 'application/json;charset=UTF-8',
+        "Access-Control-Allow-Origin": "*",
+    }
+};
 const styles = theme => ({
     container: {
         display: 'flex',
@@ -53,7 +58,6 @@ const styles = theme => ({
         margin: theme.spacing.unit,
     },
 });
-
 
 class Domain extends Component {
     constructor(props) {
@@ -100,7 +104,7 @@ class Domain extends Component {
             "queryType": "GET"
         };
         try {
-            const response = await axios.post("/domain", params);
+            const response = await axios.post("/domain", params, axiosConfig);
                 let data = response.data.payload
                 data.sort(function (a, b) {
                 let keyA = a.psDom.toUpperCase(); // ignore upper and lowercase
@@ -174,7 +178,7 @@ class Domain extends Component {
 
     setData = async (params) => {
         try {
-            await axios.post("/domain", params);
+            await axios.post("/domain", params, axiosConfig);
             this.getData();
             this.selectFirstNode();
             this.setState({
@@ -216,7 +220,7 @@ class Domain extends Component {
 
     delData = async (params) => {
         try {
-            await axios.post("/domain", params);
+            await axios.post("/domain", params, axiosConfig);
             this.getData();
             this.selectFirstNode();
         } catch (e) {

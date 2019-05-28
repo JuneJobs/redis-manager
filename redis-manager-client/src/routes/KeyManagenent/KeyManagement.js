@@ -37,6 +37,12 @@ let selectedData = {
     lgKey: '',
     psKey: ''
 };
+const axiosConfig = {
+    headers: {
+        'Content-Type': 'application/json;charset=UTF-8',
+        "Access-Control-Allow-Origin": "*",
+    }
+};
 const styles = theme => ({
     root: {
         flexGrow: 1,
@@ -290,7 +296,7 @@ class KeyManagement extends React.Component {
             "queryType": "GET"
         };
         try {
-            const res = await axios.post("/domain", params);
+            const res = await axios.post("/domain", params, axiosConfig);
             console.log(res);
             let domains = [{
                 lgDom: '*',
@@ -424,7 +430,7 @@ class KeyManagement extends React.Component {
             "queryType": "GET"
         };
         try {
-            const response = await axios.post("/keys", params);
+            const response = await axios.post("/keys", params, axiosConfig);
             let rowdata = response.data.payload
             rowdata.sort(function (a, b) {
                 let keyA = a.psKey.toUpperCase(); // ignore upper and lowercase
@@ -496,7 +502,7 @@ class KeyManagement extends React.Component {
                 }
             }
             
-            await axios.post("/keys", params);
+            await axios.post("/keys", params, axiosConfig);
 
             this.getData();
             this.setState({
@@ -521,7 +527,7 @@ class KeyManagement extends React.Component {
             "psKey": this.state.selectedData.psKey
         };
         try {
-            await axios.post("/keys", params).then( res => {
+            await axios.post("/keys", params, axiosConfig).then(res => {
                 if(res.data.resCode === 0) {
                     this.getData();
                     this.setState({
