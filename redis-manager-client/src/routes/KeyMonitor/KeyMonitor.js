@@ -167,6 +167,7 @@ class KeyMonitor extends Component {
             defaultColDef: {
                 width: 200,
                 editable: true,
+                resizable: true,
                 filter: "agTextColumnFilter"
             },
             rowSelection: "single",

@@ -20,6 +20,10 @@ const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',
         "Access-Control-Allow-Origin": "*",
+    },
+    proxy: {
+        host: 'localhost',
+        port: 1234
     }
 };
 const styles = theme => ({
@@ -56,6 +60,7 @@ class MonitorCardType1 extends Component {
             defaultColDef: {
                 width: 200,
                 editable: true,
+                resizable: true,
                 filter: "agTextColumnFilter"
             },
             idx: props.idx,
@@ -322,7 +327,7 @@ class MonitorCardType1 extends Component {
                     />
                     <TextField
                     id="standard-name4"
-                    label="Auto search seconds"
+                    label="Auto search Interval"
                     className={classes.textField}
                     value={this.state.sec}
                     //onChange={this.handleChange('name')}
@@ -358,7 +363,7 @@ class MonitorCardType1 extends Component {
                     <div
                         id="myGrid"
                         style={{
-                        height: "100%",
+                        height: "200px",
                         width: "100%"
                         }}
                         className="ag-theme-balham"

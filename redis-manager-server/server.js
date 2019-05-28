@@ -9,11 +9,11 @@ var cors = require('cors')
 
 const _apiPort = config.webServicePort;
 global.app = express();
+app.use(cors());
 global.router = express.Router();
 global.path = __dirname;
 
 app.use(bodyParser.json()); // support json encoded bodies
-app.use(cors());
 app.use("/", router);
 
 require('./src/router/router');

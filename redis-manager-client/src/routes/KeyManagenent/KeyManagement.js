@@ -41,6 +41,10 @@ const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',
         "Access-Control-Allow-Origin": "*",
+    },
+    proxy: {
+        host: 'localhost',
+        port: 1234
     }
 };
 const styles = theme => ({
@@ -250,13 +254,13 @@ class KeyManagement extends React.Component {
               headerName: "Physical Key",
               field: "psKey",
               editable: false,
-              width: 200
+              width: 150
             },
             {
               headerName: "Logical Key",
               field: "lgKey",
               editable: false,
-              width: 600
+              width: 550
             },
             {
               headerName: "Key Pattern",
@@ -268,12 +272,13 @@ class KeyManagement extends React.Component {
               headerName: "Key Type",
               field: "tyKey",
               editable: false,
-              width: 200
+              width: 100
             }
           ],
           defaultColDef: {
             width: 200,
             editable: true,
+            resizable: true,
             filter: "agTextColumnFilter"
           },
           rowSelection: "single",
@@ -527,7 +532,7 @@ class KeyManagement extends React.Component {
             "psKey": this.state.selectedData.psKey
         };
         try {
-            await axios.post("/keys", params, axiosConfig).then(res => {
+            await axios.post("/keys", params, axiosConfig).then( res => {
                 if(res.data.resCode === 0) {
                     this.getData();
                     this.setState({
@@ -728,7 +733,7 @@ class KeyManagement extends React.Component {
                     <div
                     id="myGrid"
                     style={{
-                        height: "100%",
+                        height: "669px",
                         width: "100%"
                     }}
                     className="ag-theme-balham"

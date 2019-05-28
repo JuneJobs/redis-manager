@@ -14,6 +14,7 @@ import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-balham.css';
 import axios from "axios";
 import 'typeface-roboto';
+axios.defaults.baseURL = 'http://intuseer.co.kr:1234';
 const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',
@@ -64,6 +65,11 @@ class Domain extends Component {
         super(props);
         this.state = {
             columnDefs: [{
+                    headerName: "ID",
+                    width: 60,
+                    editable: false,
+                    valueGetter: "node.id"
+                }, {
                 headerName: "Physical Domain",
                 field: "psDom",
                 editable: false
@@ -71,14 +77,15 @@ class Domain extends Component {
                 headerName: "Logical Domain",
                 field: "lgDom",
                 align: "right",
-                width: 200,
+                width: 400,
                 //headerCheckboxSelection: true,
                 //checkboxSelection: true,
                 editable: false
             }],
             defaultColDef: {
                 width: 200,
-                editable: true,
+                editable: true, 
+                resizable: true,
                 filter: "agTextColumnFilter"
             },
             rowSelection: "single",
@@ -292,7 +299,7 @@ class Domain extends Component {
                <div 
                     id="myGrid"
                     style={{
-                    height: "100%",
+                    height: "780px",
                     width: "100%"
                     }}
                     className="ag-theme-balham">
