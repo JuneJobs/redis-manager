@@ -279,6 +279,7 @@ class KeyManagement extends React.Component {
             width: 200,
             editable: true,
             resizable: true,
+            sortable: true,
             filter: "agTextColumnFilter"
           },
           rowSelection: "single",

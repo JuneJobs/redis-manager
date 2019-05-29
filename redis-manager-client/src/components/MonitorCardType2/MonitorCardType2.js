@@ -67,6 +67,7 @@ class MonitorCardType1 extends Component {
                 width: 200,
                 editable: true,
                 resizable: true,
+                sortable: true,
                 filter: "agTextColumnFilter"
             },
             idx: props.idx,
