@@ -94,7 +94,7 @@ class MonitorCardType1 extends Component {
                 headerName: "Keys",
                 field: "value",
                 editable: false,
-                width: 200
+                width: 250
             }],
             Strings: [{
                 headerName: "ID",
@@ -244,6 +244,17 @@ class MonitorCardType1 extends Component {
         axios.post("/searchKeyList", params, axiosConfig).then((response) => {
             let data = response.data.payload;
             if (response.data.resCode === 0) {
+                data.sort(function (a, b) {
+                    let keyA = a.value.toUpperCase(); // ignore upper and lowercase
+                    let keyB = b.value.toUpperCase(); // ignore upper and lowercase
+                    if (keyA < keyB) {
+                        return -1;
+                    }
+                    if (keyA > keyB) {
+                        return 1;
+                    }
+                    return 0;
+                });
                 this.setState({
                     hData: data
                 });
