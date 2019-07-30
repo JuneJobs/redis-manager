@@ -14,7 +14,8 @@ import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-balham.css';
 import axios from "axios";
 import 'typeface-roboto';
-axios.defaults.baseURL = 'http://intuseer.co.kr:1234';
+axios.defaults.baseURL = 'http://localhost:1234';
+//axios.defaults.baseURL = 'http://somnium.me:1234';
 const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',

@@ -4,7 +4,8 @@
 const LlRequest = require("../lib/ISRequest");
 
 const Redis = require("ioredis");
-let redis = new Redis();
+let redis = new Redis(63791, "dev.somnium.me");
+let redisCli = new Redis(63792, "dev.somnium.me");
 let resCode = {
     SUCCESS: 0,
     ERROR: 1,
@@ -122,6 +123,7 @@ router.post("/domain", (req, res) => {
                 if (err) {
                     return console.log(err);
                 } else {
+                    console.log('hello');
                     idDoms[1].splice(idDoms[1].indexOf("c:dm:search:psDom:idDom"), 1)
                     if(idDoms[1].length !== 0) {
                         //cmdSet
@@ -705,7 +707,7 @@ router.post("/MonitorList", (req, res) => {
 
     switch (params.tyKey) {
         case 'Keys':
-            redis.type(params.psKey, (err, keyType) => {
+            redisCli.type(params.psKey, (err, keyType) => {
                 if (err) {
                     return console.log(err);
                 } else {
@@ -742,7 +744,7 @@ router.post("/MonitorList", (req, res) => {
             });
             break;
         case 'Strings':
-            redis.get(params.psKey, (err, result) => {
+            redisCli.get(params.psKey, (err, result) => {
                  if (err) {
                      return console.log(err);
                  } else {
@@ -757,7 +759,7 @@ router.post("/MonitorList", (req, res) => {
             break;
 
         case 'Lists':
-            redis.lrange(params.psKey, 0, -1, (err, result) => {
+            redisCli.lrange(params.psKey, 0, -1, (err, result) => {
                 if (err) {
                     return console.log(err);
                 } else {
@@ -773,7 +775,7 @@ router.post("/MonitorList", (req, res) => {
             break;
         
         case 'Sets':
-            redis.smembers(params.psKey, (err, result) => {
+            redisCli.smembers(params.psKey, (err, result) => {
                 if (err) {
                     return console.log(err);
                 } else {
@@ -788,7 +790,7 @@ router.post("/MonitorList", (req, res) => {
             break;
 
         case 'SortedSets':
-            redis.zrange(params.psKey, 0, -1, 'WITHSCORES', (err, result) => {
+            redisCli.zrange(params.psKey, 0, -1, 'WITHSCORES', (err, result) => {
                 if (err) {
                     return console.log(err);
                 } else {
@@ -814,7 +816,7 @@ router.post("/MonitorList", (req, res) => {
             break;   
 
         case 'Hashes':
-            redis.hgetall(params.psKey, (err, result) => {
+            redisCli.hgetall(params.psKey, (err, result) => {
                 if (err) {
                     return console.log(err);
                 } else {
@@ -844,7 +846,7 @@ router.post("/searchKeyList", (req, res) => {
 
     if (params.queryType !== 'GET') return;
     let resJson = [];
-    redis.scan(0, 'MATCH', params.psKey, 'COUNT', 10000, (err, result) => {
+    redisCli.scan(0, 'MATCH', params.psKey, 'COUNT', 10000, (err, result) => {
         if (err) {
             return console.log(err);
         } else {
