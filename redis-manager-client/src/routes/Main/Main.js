@@ -23,6 +23,7 @@ import MailIcon from '@material-ui/icons/Mail';
 import Domain from '../../routes/Domain';
 import KeyManagement from '../../routes/KeyManagenent';
 import KeyMonitor from '../../routes/KeyMonitor';
+import AirSensorSimulator from '../AirSensorSimulator'
 import RedisMark from './images/redis-icon.png';
 import 'typeface-roboto';
 import SvgIcon from '@material-ui/core/SvgIcon';
@@ -97,7 +98,7 @@ const styles = theme => ({
     class Main extends React.Component {
     state = {
         open: false,
-        value: 2,
+        value: 3,
     };
 
     handleDrawerOpen = () => {
@@ -166,7 +167,7 @@ const styles = theme => ({
                         </div>
                         <Divider />
                         <List>
-                            {['Domain Management', 'Key Management', 'Monitor'].map((text, index) => (
+                            {['Domain Management', 'Key Management', 'Monitor', 'AirSensorSimulator'].map((text, index) => (
                                 <ListItem button key={index} onClick={() => this._handleTouchTap(index)}>
                                     <ListItemIcon>
                                     {(() => {
@@ -180,6 +181,10 @@ const styles = theme => ({
                                                             <path fill="#3f51b5" d="M6.5,2C8.46,2 10.13,3.25 10.74,5H22V8H18V11H15V8H10.74C10.13,9.75 8.46,11 6.5,11C4,11 2,9 2,6.5C2,4 4,2 6.5,2M6.5,5A1.5,1.5 0 0,0 5,6.5A1.5,1.5 0 0,0 6.5,8A1.5,1.5 0 0,0 8,6.5A1.5,1.5 0 0,0 6.5,5M6.5,13C8.46,13 10.13,14.25 10.74,16H22V19H20V22H18V19H16V22H13V19H10.74C10.13,20.75 8.46,22 6.5,22C4,22 2,20 2,17.5C2,15 4,13 6.5,13M6.5,16A1.5,1.5 0 0,0 5,17.5A1.5,1.5 0 0,0 6.5,19A1.5,1.5 0 0,0 8,17.5A1.5,1.5 0 0,0 6.5,16Z" />
                                                        </SvgIcon>;
                                             case 2:
+                                                return <SvgIcon>
+                                                            <path fill="#3f51b5" d="M6,22H18L12,16M21,3H3A2,2 0 0,0 1,5V17A2,2 0 0,0 3,19H7V17H3V5H21V17H17V19H21A2,2 0 0,0 23,17V5A2,2 0 0,0 21,3Z" />
+                                                       </SvgIcon>;
+                                            case 3:
                                                 return <SvgIcon>
                                                             <path fill="#3f51b5" d="M6,22H18L12,16M21,3H3A2,2 0 0,0 1,5V17A2,2 0 0,0 3,19H7V17H3V5H21V17H17V19H21A2,2 0 0,0 23,17V5A2,2 0 0,0 21,3Z" />
                                                        </SvgIcon>;
@@ -198,6 +203,7 @@ const styles = theme => ({
                         {value === 0 && <Domain/>}
                         {value === 1 && <div><KeyManagement/></div>}
                         {value === 2 && <div><KeyMonitor/></div>}
+                        {value === 3 && <div><AirSensorSimulator/></div>}
                     </main>
                 </div>
             </div>
