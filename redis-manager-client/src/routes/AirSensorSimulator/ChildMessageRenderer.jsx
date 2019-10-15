@@ -1,6 +1,15 @@
 import React, {Component} from "react";
 import Button from '@material-ui/core/Button';
-
+import axios from "axios";
+// const style = {
+    
+// };
+const axiosConfig = {
+    headers: {
+        'Content-Type': 'application/json;charset=UTF-8',
+        "Access-Control-Allow-Origin": "*",
+    }
+};
 // const style = {
     
 // };
@@ -61,16 +70,7 @@ export default class ChildMessageRenderer extends Component {
         }
     }
 
-    invokeParentMethod() {
-        console.log("working");
-        this.setState({
-            btnStyle: {
-                height: 18,
-                fontSize: '13px',
-                paddingTop: '0px',
-                paddingBottom: '0px'
-            }
-        });
+    invokeParentMethod =async () => {
     }
 
     render() {

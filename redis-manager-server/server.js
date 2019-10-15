@@ -4,7 +4,7 @@
 const config = require('./src/config/default.json');
 const bodyParser = require("body-parser");
 const express = require("express");
-var cors = require('cors')
+const cors = require('cors');
 //Import msg module
 
 const _apiPort = config.webServicePort;

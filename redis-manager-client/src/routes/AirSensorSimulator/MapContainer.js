@@ -5,8 +5,8 @@ import { Map,
          Marker } from 'google-maps-react';
 
 const mapStyles = {
-     width: '43%',
-     height: "760px",
+     width: '29%',
+     height: "730px",
   };
 
 class MapContainer extends Component {

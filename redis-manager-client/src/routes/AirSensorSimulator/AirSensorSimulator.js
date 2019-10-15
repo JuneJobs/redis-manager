@@ -16,6 +16,7 @@ import 'typeface-roboto';
 import MapContainer from './MapContainer';
 import codeGenerator from 'node-code-generator';
 import ChildMessageRenderer from "./ChildMessageRenderer";
+import BtnSimulatorDelete from "./BtnSimulatorDelete";
 const generator = new codeGenerator();
 
 //axios.defaults.baseURL = 'http://localhost:8001';
@@ -75,21 +76,21 @@ class AirSensorSimulator extends Component {
         this.gridOpt = {
             columnDefs : [{
                 headerName: "ID",
-                width: 60,
+                width: 30,
                 editable: false,
                 valueGetter: "node.id"
             }, {
                 headerName: "WiFi MAC Address",
                 field: "wmac",
                 width: 150,
-                editable: false
+                editable: false,
             } , {
                 headerName: "latitude",
-                field: "latitude",
+                field: "lat",
                 editable: false
             } ,{
                 headerName: "longitude",
-                field: "longitude",
+                field: "lng",
                 align: "right",
                 width: 100,
                 //headerCheckboxSelection: true,
@@ -109,7 +110,14 @@ class AirSensorSimulator extends Component {
                 cellRenderer: "childMessageRenderer",
                 editable: false,
                 colId: "params",
-                width: 180
+                width: 100
+            },{
+                headerName: "Delete",
+                field: "value",
+                cellRenderer: "BtnSimulatorDelete",
+                editable: false,
+                colId: "params2",
+                width: 100
             }],
             defaultColDef: {
                 width: 100,
@@ -120,7 +128,8 @@ class AirSensorSimulator extends Component {
             },
             rowSelection: "single",
             frameworkComponents: {
-                childMessageRenderer: ChildMessageRenderer
+                childMessageRenderer: ChildMessageRenderer,
+                BtnSimulatorDelete: BtnSimulatorDelete
             }
             
         };
@@ -134,6 +143,17 @@ class AirSensorSimulator extends Component {
         // }
         this.state = {
             sensorListTuples: []
+        }
+    }
+    methodFromParent(e) {
+        if(e.colDef.colId === "params") {
+            if(e.data.actf === 1 ) { //동작 시작
+                
+            } else if (e.data.actf === 2) { //동작 종료
+
+            }
+        } else if (e.colDef.colId === "params2") {
+            this.bind_sensor_list();
         }
     }
     updateMapPosCenter(lat, lng, zoomLv) {
@@ -254,6 +274,16 @@ class AirSensorSimulator extends Component {
         let res = await axios.post("/s_api_v1_0", params, axiosConfig);
         cb(res.data.payload.selectedSensorInfoListEncodings);
     }
+    run_gps_add = async(wmac, cb) => {
+        let gps = this.generate_gps();
+        let params = {
+            "queryType": "POST",
+            "wmac": wmac,
+            "gps": gps
+        }
+        let res = await axios.post("/simulator", params, axiosConfig);
+        cb(res);
+    }
     onAddClick() {
         //자동 로그인
         this.run_sign_in((conn)=> {
@@ -267,6 +297,9 @@ class AirSensorSimulator extends Component {
                     //SAS 호출
                     this.run_administrator_sensor_association(conn.usn, conn.nsc, macAdd.wmac, mobf, (result) => {
                         if(result === 0){
+                            this.run_gps_add(macAdd.wmac, (result)=> {
+                                console.log('GPS 등록 성공')
+                            });
                             //자동 로그아웃
                             this.run_sign_out(conn.usn, conn.nsc, (result)=> {
                                 if(result === 0){
@@ -331,12 +364,15 @@ class AirSensorSimulator extends Component {
         this.bind_sensor_list();
     }
     onStateBtnClick() {
-        //동작 종료를 누를 경우
         //동작 시작을 누를 경우
             //SIR
+            this.run_sensor_identifier_retrieval();
             //DCA
             //RAD
                 //Make data tuple
+
+        //동작 종료를 누를 경우
+            //DCD
     }
     render() {
         const { classes } = this.props;
@@ -354,12 +390,12 @@ class AirSensorSimulator extends Component {
                                 시뮬레이터 추가하기
                             </Button>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid item xs={4}>
                             <Paper className={classes.paper}>
                                 <MapContainer sensorListTuples={this.state.sensorListTuples} updateMapPosCenter={this.updateMapPosCenter.bind(this)}/>
                             </Paper>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid item xs={8}>
                             <Paper className={classes.paper}>
                                 <div 
                                     id="myGrid"
@@ -375,6 +411,7 @@ class AirSensorSimulator extends Component {
                                         onGridReady={this.onGridReady}
                                         // onSelectionChanged={this.onSelectionChanged.bind(this)}
                                         rowData={this.state.sensorListTuples}
+                                        onCellClicked={this.methodFromParent.bind(this)}
                                         frameworkComponents={this.gridOpt.frameworkComponents}
                                     >
                                     </AgGridReact>
