@@ -19,10 +19,10 @@ import ChildMessageRenderer from "./ChildMessageRenderer";
 import BtnSimulatorDelete from "./BtnSimulatorDelete";
 const generator = new codeGenerator();
 
-//axios.defaults.baseURL = 'http://localhost:8001';
-axios.defaults.baseURL = 'http://intuseer.co.kr:8001';
+//axios.defaults.baseURL = 'http://intuseer.co.kr:8001';
 //axios.defaults.baseURL = 'http://somnium.me:1234';
-
+const simulator_server = 'http://localhost:8080';
+const api_server = 'http://localhost:8001';
 const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',
@@ -134,8 +134,8 @@ class AirSensorSimulator extends Component {
             
         };
         this.mapPosCenter = {
-            lat: 0,
-            lng: 0,
+            lat: 35.835412,
+            lng: 128.679357,
             zoomLv:0
         };
         // this.state = {
@@ -143,17 +143,56 @@ class AirSensorSimulator extends Component {
         // }
         this.state = {
             sensorListTuples: []
-        }
+        };
     }
-    methodFromParent(e) {
+    onMarkerClick(wmac) {
+        //test;
+        this.gridApi.forEachNode(function (node) {
+            if (node.rowIndex === 0) {
+                node.setSelected(true);
+            }
+        });
+    }
+    methodFromParent = async (e) => {
         if(e.colDef.colId === "params") {
             if(e.data.actf === 1 ) { //동작 시작
+                let params = {
+                    "operation": "run",
+                    "simulator_wmac": e.data.wmac
+                };
+                axios.defaults.baseURL = simulator_server;
+                let res = await axios.post("/s_simulator_control", params, axiosConfig);
+                if(res) {
+                    this.bind_sensor_list();
+                }
                 
             } else if (e.data.actf === 2) { //동작 종료
-
+                let params = {
+                    "operation": "kill",
+                    "simulator_wmac": e.data.wmac
+                };
+                axios.defaults.baseURL = simulator_server;
+                let res = await axios.post("/s_simulator_control", params, axiosConfig);
+                if(res) {
+                    this.bind_sensor_list();
+                }
             }
         } else if (e.colDef.colId === "params2") {
-            this.bind_sensor_list();
+            if(e.data.actf === 1) {
+                let params = {
+                    "queryType": "DELETE",
+                    "wmac": e.data.wmac
+                };
+                axios.defaults.baseURL = api_server;
+                let res = await axios.post("/simulator", params, axiosConfig);
+                this.run_sign_in((conn)=> {
+                    this.run_administrator_sensor_deregistration(conn.usn, conn.nsc, e.data.wmac, (result)=> {
+                        if(result === 0) {
+                            this.bind_sensor_list();
+                        }
+                    });
+                });
+            }
         }
     }
     updateMapPosCenter(lat, lng, zoomLv) {
@@ -201,6 +240,7 @@ class AirSensorSimulator extends Component {
                 "userPw": "test123@"
             }
         };
+        axios.defaults.baseURL = api_server;
         let res = await axios.post("/s_api_v1_0", params, axiosConfig);
         //res.data.payload
         let conn = {
@@ -223,6 +263,7 @@ class AirSensorSimulator extends Component {
                 "cmac": macAdd.cmac
             }
         }
+        axios.defaults.baseURL = api_server;
         let res = await axios.post("/s_api_v1_0", params, axiosConfig);
         cb(res.data.payload.resultCode);
 
@@ -240,6 +281,7 @@ class AirSensorSimulator extends Component {
                 "mobf": mobf
             }
         }
+        axios.defaults.baseURL = api_server;
         let res = await axios.post("/s_api_v1_0", params, axiosConfig);
         cb(res.data.payload.resultCode);
     }
@@ -254,6 +296,7 @@ class AirSensorSimulator extends Component {
                 "nsc": nsc
             }
         }
+        axios.defaults.baseURL = api_server;
         let res = await axios.post("/s_api_v1_0", params, axiosConfig);
         cb(res.data.payload.resultCode);
     }
@@ -271,16 +314,36 @@ class AirSensorSimulator extends Component {
                 "mobf":0
             }
         }
+        axios.defaults.baseURL = api_server;
         let res = await axios.post("/s_api_v1_0", params, axiosConfig);
         cb(res.data.payload.selectedSensorInfoListEncodings);
+    }
+    run_administrator_sensor_deregistration = async(usn, nsc, wmac, cb) => {
+        let params = {
+            "header": {
+                "msgType": 119,
+                "msgLen": 0,
+                "endpointId":usn
+            },
+            "payload": {
+                "nsc": nsc,
+                "wmac": wmac,
+                "drgcd": 2,
+                "userId":"airoundu@gmail.com"
+            }
+        }
+        axios.defaults.baseURL = api_server;
+        let res = await axios.post("/s_api_v1_0", params, axiosConfig);
+        cb(res.data.payload.resultCode);
     }
     run_gps_add = async(wmac, cb) => {
         let gps = this.generate_gps();
         let params = {
             "queryType": "POST",
             "wmac": wmac,
-            "gps": gps
+            "gps": `${gps.lat},${gps.lng}`
         }
+        axios.defaults.baseURL = api_server;
         let res = await axios.post("/simulator", params, axiosConfig);
         cb(res);
     }
@@ -318,7 +381,6 @@ class AirSensorSimulator extends Component {
         if(selectedSensorInfoList.length === 0) return decoded_list;
         selectedSensorInfoList.map((item) => {
             let sensor_tuple = item.split(',');
-            console.log(sensor_tuple);
             decoded_list.push({
                 wmac: sensor_tuple[0],
                 lat: Number(sensor_tuple[6]),
@@ -344,10 +406,10 @@ class AirSensorSimulator extends Component {
                 this.setState({
                     sensorListTuples: decoded_list
                 });
-                this.select_first_node();
                 this.run_sign_out(conn.usn, conn.nsc, (result)=> {
                     if(result === 0){
                         console.log(`센서리스트 갱신 성공`);
+                        
                     }
                 })
             });
@@ -362,17 +424,6 @@ class AirSensorSimulator extends Component {
     };
     componentWillMount(){
         this.bind_sensor_list();
-    }
-    onStateBtnClick() {
-        //동작 시작을 누를 경우
-            //SIR
-            this.run_sensor_identifier_retrieval();
-            //DCA
-            //RAD
-                //Make data tuple
-
-        //동작 종료를 누를 경우
-            //DCD
     }
     render() {
         const { classes } = this.props;
@@ -392,7 +443,7 @@ class AirSensorSimulator extends Component {
                         </Grid>
                         <Grid item xs={4}>
                             <Paper className={classes.paper}>
-                                <MapContainer sensorListTuples={this.state.sensorListTuples} updateMapPosCenter={this.updateMapPosCenter.bind(this)}/>
+                                <MapContainer sensorListTuples={this.state.sensorListTuples} updateMapPosCenter={this.updateMapPosCenter.bind(this)} onMarkerClick = {this.onMarkerClick.bind(this)}/>
                             </Paper>
                         </Grid>
                         <Grid item xs={8}>

@@ -3,11 +3,13 @@ import React, {Component} from 'react';
 import { Map, 
          GoogleApiWrapper, 
          Marker } from 'google-maps-react';
-
+import air_sensor from '../../image/air_sensor.png';
+import { amber } from '@material-ui/core/colors';
 const mapStyles = {
      width: '29%',
      height: "730px",
-  };
+};
+
 
 class MapContainer extends Component {
     constructor(props) {
@@ -21,14 +23,17 @@ class MapContainer extends Component {
                         id={index} 
                         label={`${store.wmac}`} 
                         position={{
-                            lat: store.latitude,
-                            lng: store.longitude
+                            lat: store.lat,
+                            lng: store.lng
+                        }}
+                        icon={{
+                          url: air_sensor
                         }}
                         onClick={this.onMarkerClick.bind(this)} />
         })
     }
     onMarkerClick(e) {
-        console.log(encodeURIComponent);
+        this.props.onMarkerClick(e.label);
     }
     onDragEnd(e,target) {
         this.props.updateMapPosCenter(target.center.lat().toFixed(6), target.center.lng().toFixed(6), target.zoom);
