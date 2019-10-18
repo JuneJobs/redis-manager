@@ -21,7 +21,9 @@ const generator = new codeGenerator();
 
 //axios.defaults.baseURL = 'http://intuseer.co.kr:8001';
 //axios.defaults.baseURL = 'http://somnium.me:1234';
-const simulator_server = 'http://localhost:8080';
+// const simulator_server = 'http://localhost:8080';
+// const api_server = 'http://localhost:8001';
+const simulator_server = 'http://13.124.104.59:8080';
 const api_server = 'http://localhost:8001';
 const axiosConfig = {
     headers: {
@@ -148,7 +150,7 @@ class AirSensorSimulator extends Component {
     onMarkerClick(wmac) {
         //test;
         this.gridApi.forEachNode(function (node) {
-            if (node.rowIndex === 0) {
+            if (node.data.wmac === wmac) {
                 node.setSelected(true);
             }
         });
@@ -201,7 +203,6 @@ class AirSensorSimulator extends Component {
             lng: Number(lng),
             zoomLv: zoomLv 
         }
-        console.log(this.state.mapPosCenter);
     }
     generate_gps(){
         let posCenter = this.mapPosCenter,
