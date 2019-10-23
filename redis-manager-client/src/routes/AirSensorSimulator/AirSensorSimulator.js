@@ -24,7 +24,7 @@ const generator = new codeGenerator();
 // const simulator_server = 'http://localhost:8080';
 // const api_server = 'http://localhost:8001';
 const simulator_server = 'http://13.124.104.59:8080';
-const api_server = 'http://localhost:8001';
+const api_server = 'http://somnium.me:8001';
 const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',

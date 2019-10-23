@@ -5,7 +5,7 @@ const LlRequest = require("../lib/ISRequest");
 
 const Redis = require("ioredis");
 let redis = new Redis(63791, "dev.somnium.me");
-let redisCli = new Redis(63792, "dev.somnium.me");
+let redisCli = new Redis(6379, "dev.somnium.me");
 let resCode = {
     SUCCESS: 0,
     ERROR: 1,
