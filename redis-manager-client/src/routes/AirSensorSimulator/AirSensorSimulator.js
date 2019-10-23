@@ -23,7 +23,7 @@ const generator = new codeGenerator();
 //axios.defaults.baseURL = 'http://somnium.me:1234';
 // const simulator_server = 'http://localhost:8080';
 // const api_server = 'http://localhost:8001';
-const simulator_server = 'http://13.124.104.59:8080';
+const simulator_server = 'http://13.125.132.98:8080';
 const api_server = 'http://somnium.me:8001';
 const axiosConfig = {
     headers: {
