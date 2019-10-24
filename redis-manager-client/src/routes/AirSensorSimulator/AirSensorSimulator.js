@@ -352,7 +352,8 @@ class AirSensorSimulator extends Component {
         //자동 로그인
         this.run_sign_in((conn)=> {
             console.log(conn);
-            let macAdd = this.generate_mac_address();
+            if(conn.usn !== undefined) {
+                let macAdd = this.generate_mac_address();
             //ASR 호출
             this.run_administrator_sensor_registration(conn.usn, conn.nsc, macAdd, (result) => {
                 console.log(result);
@@ -375,6 +376,9 @@ class AirSensorSimulator extends Component {
                     })
                 }
             });
+            } else {
+                console.log('관리자를 등록 해야합니다.')
+            }
         });
     }
     decode_sensor_list_tuple(selectedSensorInfoList) {
@@ -403,6 +407,7 @@ class AirSensorSimulator extends Component {
         //자동 로그인
         this.run_sign_in((conn)=> {
             this.run_sensor_ist_view(conn.usn, conn.nsc, (selectedSensorInfoList) => {
+                if(selectedSensorInfoList === undefined) return;
                 let decoded_list = this.decode_sensor_list_tuple(selectedSensorInfoList);
                 this.setState({
                     sensorListTuples: decoded_list
