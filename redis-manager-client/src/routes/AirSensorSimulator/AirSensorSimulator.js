@@ -351,7 +351,6 @@ class AirSensorSimulator extends Component {
     onAddClick() {
         //자동 로그인
         this.run_sign_in((conn)=> {
-            console.log(conn);
             if(conn.usn !== undefined) {
                 let macAdd = this.generate_mac_address();
             //ASR 호출
