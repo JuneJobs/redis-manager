@@ -43,7 +43,7 @@ const axiosConfig = {
         "Access-Control-Allow-Origin": "*",
     },
     proxy: {
-        host: 'localhost',
+        host: 'http://admin.intuseer.com:1234',
         port: 1234
     }
 };

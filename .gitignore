@@ -1,3 +1,4 @@
 # Dependency directories
 redis-manager-server/node_modules/
-redis-manager-server/src/config/
+redis-manager-server/src/config/default.json
+redis-manager-client/redis-manager/

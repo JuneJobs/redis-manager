@@ -37,6 +37,7 @@ import MonitorCardType2 from '../../components/MonitorCardType2/MonitorCardType2
 
 //import update from 'react-addons-update'
 import { stat } from 'fs';
+axios.defaults.baseURL = 'http://admin.intuseer.com:1234';
 const axiosConfig = {
     headers: {
         'Content-Type': 'application/json;charset=UTF-8',
