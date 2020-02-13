@@ -4,75 +4,21 @@
 const LlRequest = require("../lib/ISRequest");
 
 const Redis = require("ioredis");
-let redis = new Redis();
-let responseCode = {
-    SUCCESS: '0',
-    ERROR: '1',
-    DUPLICATION: '2',
-    USING: '3'
+let redis = new Redis(6379, "localhost");
+let redisCli = new Redis(6379, "localhost");
+let resCode = {
+    SUCCESS: 0,
+    ERROR: 1,
+    DUPLICATION: 2,
+    USING: 3,
+    NOT_EXIST: 4
+}
+let response = {
+    resCode : '',
+    payload : []
 }
 
-router.post("/domain", (req, res) => {
-    let param = req.body;
-    switch (param.queryType) {
-        /*  URI     /domain
-            param   queryType: POST
-                    py: physical
-                    lg: logical
-        */
-        case 'POST':
-            redis.set(`c:dm:${param.psDom}`, param.lgDom);
-                res.send(responseCode.SUCCESS);
-            break;
-
-         /* URI     /domain
-            
-            param   queryType: PUT
-                    py: physical
-                    lg: logical
-        */
-        case 'PUT':
-            redis.set(`c:dm:${param.psDom}`, param.lgDom);
-                res.send(responseCode.SUCCESS);
-            break;
-        
-        /*  URI     /domain
-            param   queryType: GET
-        */
-        case 'GET':
-            redis.keys(`c:dm:*`, (err, keys) => {
-                console.log(keys);
-                let pipeline = redis.pipeline();
-                keys.map((key) => {pipeline.get(key)});
-                pipeline.exec((err, values) => {
-                    let responseJson = [];
-                    values.map((array, index) => {
-                        responseJson.push({
-                            'key': keys[index].slice(5),
-                            'value': array[1]
-                        });
-                    });
-                    res.send(responseJson);
-                });
-
-            });
-            break;
-        
-        /*  URI     /domain
-            param   queryType: DELETE
-                    key: domain key name
-        */
-        case 'DELETE':
-            redis.del(`c:dm:${param.key}`);
-            res.send(responseCode.SUCCESS);
-            break;
-
-        default:
-            break;
-    }
-});
-
-
+//Index maker
 let _getIndexForKey = (key, cb) => {
     redis.hget('c:ui', key, (err, keyIndex) => {
         if (keyIndex !== null) {
@@ -86,271 +32,830 @@ let _getIndexForKey = (key, cb) => {
         }
     });
 }
+let _notExists = (key) => {
+    if (key === null || key.length === 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+let _Exists = (key) => {
+    if (key === null || key.length === 0) {
+        return false
+    } else {
+        return true
+    }
+} 
 
-router.post("/keys", (req, res) =>{
+redis.monitor((err, monitor) => {
+    monitor.on('monitor', (time, args, source, database) => {
+        console.log('Redis monitor>', time, args, source, database);
+    });
+});
+
+router.post("/domain", (req, res) => {
     let params = req.body;
-    switch (params.queryType) {
-        /*  URI     /key
-            Param   queryType: POST
-                    psKey: physical Key
-                    lgKey: logical Key
-                    ptKey: pattern Key for *
-            Description  키를 처음 등록할 때 서버에 키가 이미 저장 되어 있는지 확인
-                         없을 경우 추가
-                            key example
-                                c:km:1:psKey
-                                c:km:1:lgKey
-                                c:km:1:ptKey
-                         있을 경우 중복
-        */
+    switch (params.queryType) { 
         case 'POST':
-            redis.sismember('c:km:rg', params.psKey, (err, keyExistance) => {
-                //If key exist
-                if (keyExistance === 0) {
-                    _getIndexForKey('km', (keyIndex)=> {
-                        //키를 추가
-                        redis.pipeline([
-                            ['set', `c:km:${keyIndex}:psKey`, params.psKey],
-                            ['set', `c:km:${keyIndex}:lgKey`, params.lgKey],
-                            ['set', `c:km:${keyIndex}:ptKey`, params.ptKey],
-                            ['set', `c:km:${keyIndex}:tyKey`, params.tyKey],
-                            ['set', `c:km:${keyIndex}:idx`, keyIndex],
-                            ['hset', `c:km:key:idx`, params.psKey, keyIndex],
-                            //수정 추가작업 필요
-                            ['sadd', 'c:km:rg', keyIndex]
-                        ]).exec((err, result) => {
-                            res.send(responseCode.SUCCESS);
+            /*  URI     /domain
+                param   queryType: POST
+                        psDom: Physical Domain
+                        lgDom: Logical Domain
+            */
+            redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
+                if(err) { return console.log(err); } else { 
+                    if (_notExists(idDom)) {
+                        //create idDom
+                        _getIndexForKey('dm', (newIdDom) => {
+                            redis.multi([
+                                [`set`, `c:dm:${newIdDom}:psDom`, params.psDom],
+                                [`set`, `c:dm:${newIdDom}:lgDom`, params.lgDom],
+                                [`set`, `c:dm:${newIdDom}:idDom`, newIdDom],
+                                [`hset`, `c:dm:search:psDom:idDom`, params.psDom, newIdDom]
+                            ]).exec((err, result)=> {
+                                if(err) { return console.log(err); } else { 
+                                    response.resCode = resCode.SUCCESS;
+                                    response.payload = [];
+                                    res.send(response);
+                                }
+                            })
                         });
-
-                    });
-                
-                //If key does not exist
-                } else {
-                    res.send(responseCode.DUPLICATION);
+                    } else {
+                        response.resCode = resCode.DUPLICATION;
+                        response.payload = [];
+                        res.send(response);
+                    }
                 }
-            });  
-
+            });
             break;
-
-         /* URI     /key
-            
-            param   queryType: PUT
-                    py: physical
-                    lg: logical
-        */
         case 'PUT':
-            console.log('>>',params);
-            redis.pipeline([
-                ['set', `c:km:${params.idx}:psKey`, params.psKey],
-                ['set', `c:km:${params.idx}:lgKey`, params.lgKey],
-                ['set', `c:km:${params.idx}:ptKey`, params.ptKey],
-                ['set', `c:km:${params.idx}:tyKey`, params.tyKey],
-            ]).exec((err, result) => {
-                res.send(responseCode.SUCCESS);
-            });
-            break;
-        
-        /*  URI     /key
-            param   queryType: GET
-        */
-        case 'GET':
-            redis.smembers('c:km:rg', (err, keys) => {
-                let pipeline = redis.pipeline();
-
-                keys.map((key) => {
-                    pipeline.mget(`c:km:${key}:idx`, `c:km:${key}:psKey`, `c:km:${key}:lgKey`, `c:km:${key}:ptKey`, `c:km:${key}:tyKey`);
-                });
-                pipeline.exec((err, values) => {
-                    //values[0].shift();
-                    let responseJson = [];
-                    values.map((array) => {
-                        responseJson.push({
-                            idx: array[1][0], 
-                            psKey: array[1][1],
-                            lgKey: array[1][2],
-                            ptKey: array[1][3],
-                            tyKey: array[1][4]
-                        });
-                    })
-
-                    console.log(responseJson);
-                    
-                    // let responseJson = [];
-                    // values.map((array, index) => {
-                    //     responseJson.push(array);
-                    // });
-                     res.send(responseJson);
-                });
-                //res.send(keys);
-            });
-            break;
-        
-        /*  URI     /key
-            param   queryType: DELETE
-                    key: domain key name
-        */
-        case 'DELETE':
-            redis.scan(1, 'match', params.psKey, (err, keys) => {
-                if (keys[1].length > 0) {
-                    res.send(responseCode.USING);
-                } else {
-                    redis.pipeline([
-                        ['del', `c:km:${params.idx}:psKey`],
-                        ['del', `c:km:${params.idx}:lgKey`],
-                        ['del', `c:km:${params.idx}:ptKey`],
-                        ['del', `c:km:${params.idx}:tyKey`],
-                        ['del', `c:km:${params.idx}:idx`],
-                        ['srem', `c:km:rg`, params.idx]
-                    ]).exec((err, result) => {
-                        res.send(responseCode.SUCCESS);
-                    });
+            /*  URI     /domain
+                param   queryType: PUT
+                        psDom: Physical Domain
+                        lgDom: Logical Domain
+            */
+            redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
+                if (err) { return console.log(err); } else {
+                    if (_Exists(idDom)) {
+                        redis.multi([
+                            [`set`, `c:dm:${idDom}:lgDom`, params.lgDom]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        })
+                        
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
                 }
-            })
-            
+            });
+            break;
+        case 'GET':
+            /*  URI     /domain
+                param   queryType: GET
+            */
+            redis.scan(0, "match", "c:dm:*:idDom", "count", "1000", (err, idDoms) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    console.log('hello');
+                    idDoms[1].splice(idDoms[1].indexOf("c:dm:search:psDom:idDom"), 1)
+                    if(idDoms[1].length !== 0) {
+                        //cmdSet
+                        let commandSet = [];
+                        idDoms[1].map((array, index) => {
+                            let idDom = parseInt(array.split(":")[2]);
+                            commandSet.push([`mget`, `c:dm:${idDom}:psDom`, `c:dm:${idDom}:lgDom`]);
+                        });
+                        //execute domain list searching
+                        redis.multi(commandSet).exec((err, replies) => {
+                            let resJson = [];
+                            replies.map((array, index) => {
+                                resJson.push({
+                                    'psDom': array[1][0],
+                                    'lgDom': array[1][1]
+                                });
+                            });
+                            response.resCode = resCode.SUCCESS;
+                            response.payload = resJson;
+                            res.send(response);
+                        });
+                    } else {
+                        response.resCode = resCode.SUCCESS;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+            break;
+        case `DELETE`:
+            /*  URI     /domain
+                param   queryType: DELETE
+                        psDom: Physical Domain
+            */
+            redis.hget(`c:dm:search:psDom:idDom`, params.psDom, (err, idDom) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idDom)) {
+                        //check if it is used to key
+                        redis.smembers(`c:dm:${idDom}:used`, (err, idKeys) => {
+                            if(_notExists(idKeys)) {
+                                redis.multi([
+                                    [`del`, `c:dm:${idDom}:psDom`],
+                                    [`del`, `c:dm:${idDom}:lgDom`],
+                                    [`del`, `c:dm:${idDom}:idDom`],
+                                    [`hdel`, `c:dm:search:psDom:idDom`, params.psDom]
+                                ]).exec((err, result) => {
+                                    if (err) {
+                                        return console.log(err);
+                                    } else {
+                                        response.resCode = resCode.SUCCESS;
+                                        response.payload = [];
+                                        res.send(response);
+                                    }
+                                })
+                            } else {
+                                response.resCode = resCode.USING;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+        break;
+    }
+});
+
+router.post("/keys", (req, res) => {
+    let params = req.body;
+    
+    switch (params.queryType) {
+        case 'POST':
+            /*  URI     /key
+                Param   queryType: POST
+                        psKey: physical Key
+                        lgKey: logical Key
+                        ptKey: pattern Key for *
+                Description  키를 처음 등록할 때 서버에 키가 이미 저장 되어 있는지 확인
+                                없을 경우 추가
+                                key example
+                                    c:km:1:psKey
+                                    c:km:1:lgKey
+                                    c:km:1:ptKey
+                                있을 경우 중복
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if(_notExists(idKey)) {
+                        _getIndexForKey('km', (newIdKey) => {
+                            let domains = params.psKey.split(':'),
+                                command = [`c:dm:search:psDom:idDom`];
+                            command = command.concat(domains)
+                            redis.hmget(command, (err, idDoms) => {
+                                if (err) {
+                                    return console.log(err);
+                                } else {
+                                    let commandSet = [];
+                                    idDoms.map((idDom) => {
+                                        commandSet.push([`sadd`, `c:dm:${idDom}:used`, newIdKey]);
+                                    });
+                                    commandSet = [...commandSet, 
+                                        [`set`, `c:km:${newIdKey}:psKey`, params.psKey],
+                                        [`set`, `c:km:${newIdKey}:lgKey`, params.lgKey],
+                                        [`set`, `c:km:${newIdKey}:tyKey`, params.tyKey],
+                                        [`set`, `c:km:${newIdKey}:ptKey`, params.ptKey],
+                                        [`set`, `c:km:${newIdKey}:idKey`, newIdKey],
+                                        [`hset`, `c:km:search:psKey:idKey`, params.psKey, newIdKey]
+                                    ]
+                                    redis.multi(commandSet).exec((err, result) => {
+                                        if (err) {
+                                            return console.log(err);
+                                        } else {
+                                            response.resCode = resCode.SUCCESS;
+                                            response.payload = [];
+                                            res.send(response);
+                                        }
+                                    });
+                                }
+                            });
+                        });
+                    } else {
+                        response.resCode = resCode.DUPLICATION;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
             break;
 
-        default:
+        case 'PUT':
+            /* URI     /key
+               param   queryType: PUT
+                       lgKey: Logical key
+                       ptKey: Key pattern
+                       tyKey: Key type
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idKey)) {
+                        redis.pipeline([
+                            ['set', `c:km:${idKey}:lgKey`, params.lgKey],
+                            ['set', `c:km:${idKey}:ptKey`, params.ptKey],
+                            ['set', `c:km:${idKey}:tyKey`, params.tyKey],
+                        ]).exec((err, result) => {
+                            if (err) {
+                                return console.log(err);
+                            } else { 
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                            
+                        });
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+            break;
+
+        case 'GET':
+            /*  URI     /key
+                param   queryType: GET
+            */
+            redis.scan(0, "match", "c:km:*:idKey", "count", "1000", (err, idDoms) => {
+                if (err) { return console.log(err); } else {
+                    if (idDoms[1].length !== 0) {
+                        idDoms[1].splice(idDoms[1].indexOf("c:km:search:psKey:idKey"), 1)
+                        let commandSet = [];
+                        idDoms[1].map((array, index) => {
+                            let idDom = parseInt(array.split(":")[2]);
+                            commandSet.push([
+                                `mget`, 
+                                `c:km:${idDom}:psKey`,
+                                `c:km:${idDom}:lgKey`,
+                                `c:km:${idDom}:ptKey`,
+                                `c:km:${idDom}:tyKey`
+                            ]);
+                        });
+                        //execute domain list searching
+                        redis.multi(commandSet).exec((err, replies) => {
+                            let resJson = []
+                            replies.map((array, index) => {
+                                resJson.push({
+                                    'psKey': array[1][0],
+                                    'lgKey': array[1][1],
+                                    'ptKey': array[1][2],
+                                    'tyKey': array[1][3]
+                                });
+                            });
+                            response.resCode = resCode.SUCCESS;
+                            response.payload = resJson;
+                            res.send(response);
+                        });
+                    } else {
+                        response.resCode = resCode.SUCCESS;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+            break;
+        case 'DELETE':
+            /*  URI     /key
+                param   queryType: DELETE
+                        psKey: Physical key name
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idKey)) {
+                    //모니터 셋에 사용되는 키가 존재하는지 확인
+                        redis.pipeline([
+                            ['getbit', `c:km:used:mon`, idKey]
+                        ]).exec((err, result) => {
+                            if (err) {
+                                return console.log(err)
+                            } else { 
+                                if (result[0][1] === 0) {
+                                    let commandSet = ['hmget', 'c:dm:search:psDom:idDom'];
+                                    let domains = params.psKey.split(':');
+                                    for (let i = 0; i < domains.length; i++) {
+                                        if (domains[i] != '*')
+                                        commandSet.push(domains[i]);
+                                        
+                                    }
+                                    redis.pipeline([commandSet]).exec((err, idDoms) => {
+                                        if(err) {console.log(err);} else {
+                                            commandSet = [];
+                                            idDoms = idDoms[0][1];
+                                            idDoms.map((idDom) => {
+                                                commandSet.push([`srem`, `c:dm:${idDom}:used`, idKey]);
+                                            });
+                                            commandSet.push(['del', `c:km:${idKey}:psKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:lgKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:ptKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:tyKey`]);
+                                            commandSet.push(['del', `c:km:${idKey}:idKey`]);
+                                            commandSet.push([`hdel`, `c:km:search:psKey:idKey`, params.psKey]);
+                                            console.log(commandSet);
+                                            redis.pipeline(commandSet).exec((err, result) => {
+                                                response.resCode = resCode.SUCCESS;
+                                                response.payload = [];
+                                                res.send(response);
+                                            });
+                                        }
+                                        
+                                    });
+                                    // idDoms.map((idDom) => {
+                                    //     commandSet.push([`sadd`, `c:dm:${idDom}:used`, newIdKey]);
+                                    // });
+                                    
+                                } else {
+                                    response.resCode = resCode.USING;
+                                    response.payload = [];
+                                    res.send(response);
+                                }
+                            }
+                        });
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
             break;
     }
 });
 
 router.post("/MonitorList", (req, res) => {
     let params = req.body;
-    // let params = {
-    //     queryType: 'POST',
-    //     title: 'user key monitor',
-    //     sec: 5,
-    //     auto: true,
-    //     type: 'single',
-    //     searchString: 'user:seq',
-    //     dataType: 'string'
-    // }
+    
     switch (params.queryType) {
         case 'POST':
-        /*
-            received param: [{
+            /*
+            URI     /MonitorList
+            param   queryType: POST
+                    psDom: Physical Domain
+            {
                 id: 1,
                 title: 'user key monitor',
                 sec: 5,
                 auto: true,
-                type: 'single',
-                searchString: 'user:seq',
+                monType: 'single',
+                psKey: 'user:seq',
                 dataType: 'string',
                 rowData: []
-            }, {
-                id: 2,
-                title: 'user name monitor',
-                sec: 5,
-                auto: false,
-                type: 'single',
-                searchString: 'user:name',
-                dataType: 'hash',
-                rowData: []
-            }]
-
-            string get c:km:{searchString}:tyKey
-            없으면 0
-
-            set sadd c:mnt:keys
-                value searchString
-
-            list lpush c:mnt:list
-                 value {id: 1, title: 'user key monitor', sec: 5, auto: true, type: 'single', searchString: 'user:seq', dataType: 'string'}
-            
-            
-        */
-        /*
-            redis.get(`c:km:${params.psKey}:tyKey`, (err, tyKey) => {
-                if(tyKey !== null) {
-                    redis.sismember('c:mnt:keys', params.psKey, (err, result) => {
-                        if (result === 0) {
-                            delete params['queryType'];
-                            params.dataType = tyKey;
-                            redis.pipeline([
-                                //sadd는 추후 key management에 추가 할 것
-                                [`sadd`, `c:mnt:keys`, params.psKey],
-                                [`lpush`, `c:mnt:list`, JSON.stringify(params)]
-                            ]).exec((err, result) => {
-                                console.log(responseCode.SUCCESS);
-                                res.send(responseCode.SUCCESS);
-                            })
-                        } else {
-                            console.log(responseCode.DUPLICATION);
-                            res.send(responseCode.DUPLICATION);
-                        }
-                    });
-                    
-                } else {
-                    console.log(responseCode.ERROR);
-                    res.send(responseCode.ERROR);
-                }
-            });
-            break;
-        */
-        
-        //
-        redis.hget('c:km:key:idx', params.psKey, (err, psKeyIdx) => {
-            if(err) { return console.log(err); } else {
-                if(psKeyIdx !== null) {
-                    //인덱스가 있는 경우
-                    redis.pipeline([
-                        [`sismember`, `c:mnt:keys:idx`, psKeyIdx],
-                        [`mget`, `c:km:${psKeyIdx}:lgKey`, `c:km:${psKeyIdx}:tyKey`]
-                    ]).exec((err, result) => {
-                        if(err) { return console.log(err)} else {
-                            if(0 === result[0]) {
-                                //params 저장방식 변경
-                                redis.pipeline([
-                                    [`sadd`, `c:mnt:keys:idx`, psKeyIdx],
-                                    [`rpush`, `c:mnt:list`, params]
-                                ]).exec((err, result) => {
-                                    if (err) { return console.log(err) } else {
-                                        res.send(responseCode.SUCCESS);
-                                        console.log(responseCode.SUCCESS);
-                                    }
-                                });
-                            } else {
-                                res.send(responseCode.DUPLICATION);
-                                console.log(responseCode.DUPLICATION);
-                            }
-                        }
-                    });
-                } else {
-                    //인덱스가 없는경우
-                    res.send(responseCode.ERROR);
-                }
             }
-            
-        })
-
-
-        case "GET":
-            //Send List Information
-            redis.lrange("c:mnt:list", 0, -1, (err, list) => {
-                console.log(list);
-                if(list !== null) {
-                    list.map((item, idx)=> {
-                        item = JSON.parse(item);
-                    })
-                    JSON.parse(list);
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
                 } else {
-                    
+                    if (_Exists(idKey)) {
+                       redis.multi([
+                           [`sismember`, `c:ml:search:idKey`, idKey]
+                        ]).exec((err, result) => {
+                            if (err) {
+                               return console.log(err)
+                            } else {
+                               if (0 === result[0][1]) {
+                                   delete params.queryType;
+                                    if(params.monType === 'single') {
+                                        redis.get(`c:km:${idKey}:tyKey`, (err, tyKey) => {
+                                            if (err) {
+                                                return console.log(err)
+                                            } else {
+                                                params.tyKey = tyKey;
+                                                let listData = JSON.stringify(params);
+                                                redis.pipeline([
+                                                    [`sadd`, `c:ml:search:idKey`, idKey],
+                                                    [`rpush`, `c:ml:list`, listData],
+                                                    [`setbit`, `c:km:used:mon`, idKey, 1]
+                                                ]).exec((err, result) => {
+                                                    if (err) {
+                                                        return console.log(err)
+                                                    } else {
+                                                        response.resCode = resCode.SUCCESS;
+                                                        response.payload = [];
+                                                        res.send(response);
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    } else {
+                                        params.tyKey = 'Keys';
+                                        let listData = JSON.stringify(params);
+                                        redis.pipeline([
+                                            [`sadd`, `c:ml:search:idKey`, idKey],
+                                            [`rpush`, `c:ml:list`, listData],
+                                            [`setbit`, `c:km:used:mon`, idKey, 1]
+                                        ]).exec((err, result) => {
+                                            if (err) {
+                                                return console.log(err)
+                                            } else {
+                                                response.resCode = resCode.SUCCESS;
+                                                response.payload = [];
+                                                res.send(response);
+                                            }
+                                        });
+                                    }
+                                   
+                                } else {
+                                   response.resCode = resCode.DUPLICATION;
+                                   response.payload = [];
+                                   res.send(response);
+                                }
+                            }
+                        });
+                    } else {
+                        response.resCode = resCode.NOT_EXIST;
+                        response.payload = [];
+                        res.send(response);
+                    }
+                }
+            });
+            break;
+
+        case 'PUT':
+            /*  URI     /MonitorList
+                param   queryType: PUT
+                        curIdx: Current Index (front 0 L, back -1 R, mid n)
+                        updateIdx: Update Index
+            */
+            if (params.updateIdx === 0) {
+                redis.multi([
+                    ['lrange', 'c:ml:list', curIdx, 0]
+                ]).exec((err, value) => {
+                    if (err) { return console.log(err); } else {
+                        redis.multi([
+                            ['LTRIM', 'c:ml:list', curIdx, -1],
+                            ['RPUSH', 'c:ml:list', value]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else { 
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }); 
+            } else if(params.updateIdx === -1) {
+                redis.multi([
+                    ['lrange', 'c:ml:list', curIdx, 0]
+                ]).exec((err, value) => {
+                    if (err) { return console.log(err); } else {
+                        redis.multi([
+                            ['ltrim', 'c:ml:list', curIdx, -1],
+                            ['lpush', 'c:ml:list', value]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }); 
+            } else {
+                redis.multi([
+                    ['lrange', 'c:ml:list', curIdx, 0]
+                    ['lrange', 'c:ml:list', updateIdx, 0]
+                ]).exec((err, values) => {
+                    if (err) { return console.log(err); } else {
+                        redis.multi([
+                            ['ltrim', 'c:ml:list', curIdx, -1],
+                            ['linsert', 'c:ml:list', 'BEFORE', value[0][1], value[0][0]]
+                        ]).exec((err, result) => {
+                            if (err) { return console.log(err); } else {
+                                response.resCode = resCode.SUCCESS;
+                                response.payload = [];
+                                res.send(response);
+                            }
+                        });
+                    }
+                }); 
+            }
+            break;
+
+        case 'PUT2': 
+             /*  URI     /MonitorList
+                param   queryType: PUT
+                        curIdx: Current Index
+                        auto: auto searching
+            */
+            redis.multi([
+                ['lrange', 'c:ml:list', params.curIdx, params.curIdx]
+            ]).exec((err, item) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+
+                    //make a updateItem
+                    let curItem = JSON.parse(item[0][1]);
+                    curItem.auto = params.auto;
+                    let updateItem = JSON.stringify(curItem);
+
+                    redis.multi([
+                        ['lset', 'c:ml:list', params.curIdx, updateItem]
+                    ]).exec((err, result) => {
+                        if (err) {
+                            return console.log(err);
+                        } else {
+                            response.resCode = resCode.SUCCESS;
+                            response.payload = [];
+                            res.send(response);
+                        }
+                    })
+                }
+            })
+            break;
+
+        case 'GET':
+            /*  URI     /MonitorList
+                param   queryType: GET
+            */
+            redis.multi([
+                ['lrange', 'c:ml:list', 0, -1]
+            ]).exec((err, list) => {
+                response.resCode = resCode.SUCCESS;
+                response.payload = list[0][1];
+                res.send(response);
+            });
+            break;
+
+        case 'DELETE':
+            /*  URI     /MonitorList
+                param   queryType: PUT
+                        curIdx: Current Index
+                        psKey: psKey
+            */
+            redis.hget(`c:km:search:psKey:idKey`, params.psKey, (err, idKey) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    if (_Exists(idKey)) {
+                        redis.llen('c:ml:list', (err, result) => {
+                            if (err) {
+                                return console.log(err);
+                            } else {
+                                if (params.curIdx + 1 === 1){
+                                    redis.multi([
+                                        ['lpop', 'c:ml:list'],
+                                        [`setbit`, `c:km:used:mon`, idKey, 0],
+                                        [`srem`, `c:ml:search:idKey`, idKey]
+                                    ]).exec((err, result) => {
+                                        if (err) {
+                                            return console.log(err);
+                                        } else {
+                                            response.resCode = resCode.SUCCESS;
+                                            response.payload = [];
+                                            res.send(response);
+                                        }
+                                    });
+                                } else if (params.curIdx + 1 === result) {
+                                    redis.multi([
+                                        ['rpop', 'c:ml:list'],
+                                        [`setbit`, `c:km:used:mon`, idKey, 0],
+                                        [`srem`, `c:ml:search:idKey`, idKey]
+                                    ]).exec((err, result) => {
+                                        if (err) {
+                                            return console.log(err);
+                                        } else {
+                                            response.resCode = resCode.SUCCESS;
+                                            response.payload = [];
+                                            res.send(response);
+                                        }
+                                    });
+                                }
+                                else {
+                                    redis.lrange('c:ml:list', 0, params.curIdx-1, (err, headList) => {
+                                        if (err) { return console.log(err); } else {
+                                            let command = ['lpush', 'c:ml:list'];
+                                            for (let i = headList.length-1; i >= 0; i--) {
+                                                command.push(headList[i])                                             
+                                            }
+                                            redis.multi([
+                                                ['ltrim', 'c:ml:list', params.curIdx + 1, -1],
+                                                [`setbit`, `c:km:used:mon`, idKey, 0],
+                                                [`srem`, `c:ml:search:idKey`, idKey],
+                                                command
+                                            ]).exec((err, result) => {
+                                                if (err) {
+                                                    return console.log(err);
+                                                } else {
+                                                    response.resCode = resCode.SUCCESS;
+                                                    response.payload = [];
+                                                    res.send(response);
+                                                    // redis.multi([
+                                                    //     command
+                                                    // ]).exec((err, result) => {
+                                                    //     if(err) {return console.log(err)} else {
+                                                            
+                                                    //     }
+                                                    // });
+                                                }
+                                            });
+                                        }
+                                    });
+                                    
+                                    
+                                } 
+                            }
+                            console.log(result);
+                        })
+                       
+                    }
+                }
+            });            
+            break;
+    }
+});
+
+ router.post("/searchKey", async (req, res) => {
+    /*  URI     /searchKey
+        Param queryType: GET
+                psKey: Physical Key
+                tyKey: Type of Key
+    */
+    let params = req.body;
+
+    if (params.queryType !== 'GET') return; 
+    let resJson = [];
+
+    switch (params.tyKey) {
+        case 'Keys':
+            redisCli.type(params.psKey, (err, keyType) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    let tyKey
+                    switch (keyType) {
+                        case 'string':
+                            tyKey = 'Strings';
+                            break;
+
+                        case 'list':
+                            tyKey = 'Lists';
+                            break;
+
+                        case 'set':
+                            tyKey = 'Sets';
+                            break;
+
+                        case 'zset':
+                            tyKey = 'SortedSets';
+                            break;
+
+                        case 'geoset':
+                            tyKey = 'GeoSets';
+                            break;
+
+                        case 'hash':
+                            tyKey = 'Hashes';
+                            break;
+                    }
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = tyKey;
+                    res.send(response);
+                }
+            });
+            break;
+        case 'Strings':
+            redisCli.get(params.psKey, (err, result) => {
+                 if (err) {
+                     return console.log(err);
+                 } else {
+                    resJson.push({
+                        'value': result
+                    });
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                 }
+            });
+            break;
+
+        case 'Lists':
+            redisCli.lrange(params.psKey, 0, -1, (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    result.map((item, index) => resJson.push({
+                        'idx': index,
+                        'value': item
+                    }));
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
                 }
             });
             break;
         
-        case "DELETE":
-            //list의 값을 기준으로 삭제함. item
-            redis.pipeline([
-                [`ltrim`, `c:mnt:list`, params.index, -1],
-                [`srem`, `c:mnt:keys:idx`, params.idx]
-            ]).exec((err, result) => {
+        case 'Sets':
+            redisCli.smembers(params.psKey, (err, result) => {
                 if (err) {
-                    return console.log(err)
+                    return console.log(err);
                 } else {
-                    res.send(responseCode.SUCCESS);
-                    console.log(responseCode.SUCCESS);
+                    result.map(item => resJson.push({
+                        'value': item
+                    }));
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
                 }
             });
+            break;
+
+        case 'SortedSets':
+            redisCli.zrange(params.psKey, 0, -1, 'WITHSCORES', (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    let format = {};
+                    result.map((item, index) => {
+                        if (index%2 === 0) {
+                            format.value = item;
+                        } else {
+                            format.score = item;
+                            resJson.push(format);
+                            format = {};
+                        }
+                    });
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                }
+            });
+            break;
+         
+        case 'GeoSets':
+            //TBC
+            break;   
+
+        case 'Hashes':
+            redisCli.hgetall(params.psKey, (err, result) => {
+                if (err) {
+                    return console.log(err);
+                } else {
+                    let format = {};
+                    let keys = Object.keys(result);
+                    keys.map((item) => {
+                        resJson.push({
+                            'field': item,
+                            'value': result[item]
+                        });
+                    });
+                    response.resCode = resCode.SUCCESS;
+                    response.payload = resJson;
+                    res.send(response);
+                }
+            });
+            break;   
     }
+});
+
+router.post("/searchKeyList", (req, res) => {
+    /*  URI     /searchKeyList
+        Param queryType: GET
+                psKey: Physical Key with pattern
+    */
+    let params = req.body;
+
+    if (params.queryType !== 'GET') return;
+    let resJson = [];
+    redisCli.scan(0, 'MATCH', params.psKey, 'COUNT', 10000, (err, result) => {
+        if (err) {
+            return console.log(err);
+        } else {
+            result[1].map((item) => {
+                resJson.push({
+                    'value': item
+                });
+            });
+            response.resCode = resCode.SUCCESS;
+            response.payload = resJson;
+            res.send(response);
+        }
+    });
 });

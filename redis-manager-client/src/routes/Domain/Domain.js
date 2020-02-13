@@ -116,16 +116,16 @@ class Domain extends Component {
             const response = await axios.post("/domain", params, axiosConfig);
                 let data = response.data.payload
                 data.sort(function (a, b) {
-                let keyA = a.psDom.toUpperCase(); // ignore upper and lowercase
-                let keyB = b.psDom.toUpperCase(); // ignore upper and lowercase
-                if (keyA < keyB) {
-                    return -1;
-                }
-                if (keyA > keyB) {
-                    return 1;
-                }
-                return 0;
-            });
+                    let keyA = a.psDom.toUpperCase(); // ignore upper and lowercase
+                    let keyB = b.psDom.toUpperCase(); // ignore upper and lowercase
+                    if (keyA < keyB) {
+                        return -1;
+                    }
+                    if (keyA > keyB) {
+                        return 1;
+                    }
+                    return 0;
+                });
             this.setState({
                 rowData: data
             });
