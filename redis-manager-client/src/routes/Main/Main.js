@@ -23,7 +23,6 @@ import MailIcon from '@material-ui/icons/Mail';
 import Domain from '../../routes/Domain';
 import KeyManagement from '../../routes/KeyManagenent';
 import KeyMonitor from '../../routes/KeyMonitor';
-import AirSensorSimulator from '../AirSensorSimulator'
 import RedisMark from './images/redis-icon.png';
 import 'typeface-roboto';
 import SvgIcon from '@material-ui/core/SvgIcon';
@@ -167,7 +166,7 @@ const styles = theme => ({
                         </div>
                         <Divider />
                         <List>
-                            {['Domain Management', 'Key Management', 'Monitor', 'AirSensorSimulator'].map((text, index) => (
+                            {['Domain Management', 'Key Management', 'Monitor'].map((text, index) => (
                                 <ListItem button key={index} onClick={() => this._handleTouchTap(index)}>
                                     <ListItemIcon>
                                     {(() => {
@@ -203,7 +202,6 @@ const styles = theme => ({
                         {value === 0 && <Domain/>}
                         {value === 1 && <div><KeyManagement/></div>}
                         {value === 2 && <div><KeyMonitor/></div>}
-                        {value === 3 && <div><AirSensorSimulator/></div>}
                     </main>
                 </div>
             </div>

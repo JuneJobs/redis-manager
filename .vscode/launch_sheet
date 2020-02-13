@@ -21,7 +21,7 @@
             //"program": "${workspaceRoot}/index.js",
             "program": "${workspaceRoot}/redis-manager-server/server.js",
             //"${workspaceRoot}/server/businessLogic/historicalAirData.js",
-            "runtimeExecutable": "/Users/junheepark/.nvm/versions/node/v10.6.0/bin/node",
+            //"runtimeExecutable": "/Users/junheepark/.nvm/versions/node/v10.6.0/bin/node",
             "cwd": "${workspaceRoot}"
         },
         {
