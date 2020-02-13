@@ -1,2 +1,3 @@
-node_modules/
-src/config/
+# Dependency directories
+redis-manager-server/node_modules/
+redis-manager-server/src/config/
