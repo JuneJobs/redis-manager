@@ -2,10 +2,12 @@
 
 //Import request manager module
 const LlRequest = require("../lib/ISRequest");
+const config = require("../config/default.json");
 
 const Redis = require("ioredis");
 let redis = new Redis(6379, "localhost");
-let redisCli = new Redis(6379, "localhost");
+let redisCli = new Redis(config.redisPort, config.redisUrl, {password: config.redisPassword}); //Air Redis Node 연결
+
 let resCode = {
     SUCCESS: 0,
     ERROR: 1,
