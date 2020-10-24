@@ -3,5 +3,15 @@
     "serverErrorCode": {
         "acceessDenied": 0
     },
-    "webServicePort": 1234
+    "webServicePort": 1234,
+    "connected_redis": {
+        "redisUrl": "localhost",
+        "redisPort": 63793,
+        "redisPassword": "b9dbb3ec-cd3d-4550-8e93-c3db18027b9b"
+    },
+    "main_redis": {
+        "redisUrl": "admin.intuseer.com",
+        "redisPort": 6379,
+        "redisPassword": "b9dbb3ec-cd3d-4550-8e93-c3db18027b9b"
+    } 
 }
